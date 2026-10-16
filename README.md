@@ -1,5 +1,7 @@
 # Audio Shortcut Switch
 
+<img src="assets/app.svg" alt="PON アイコン" width="72" height="72">
+
 デスクトップのショートカットから、Windows の再生出力をワンクリックで切り替えるアプリです。Bluetooth イヤホンなら接続も行います。スピーカー、USB DAC、HDMI 出力などにもショートカットを作れます。
 
 [Windows 10/11 x64 用 ZIP をダウンロード](https://github.com/ivgtr/audio-shortcut-switch/releases/latest)

@@ -308,6 +308,10 @@ fn create_shortcut(
                     "実行ファイルの設定",
                 )?;
                 check_hresult(
+                    (*link).SetIconLocation(wide(exe_path.as_os_str()).as_ptr(), 0),
+                    "アイコンの設定",
+                )?;
+                check_hresult(
                     (*link).SetArguments(wide(OsStr::new(&arguments)).as_ptr()),
                     "引数の設定",
                 )?;

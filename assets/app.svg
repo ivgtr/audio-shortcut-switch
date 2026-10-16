@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="PON speaker icon">
+  <rect x="5" y="5" width="118" height="118" rx="32" fill="#C9F4E7"/>
+  <path d="M24 55c0-5 4-9 9-9h12l16-13c5-4 11 0 11 6v50c0 6-6 10-11 6L45 82H33c-5 0-9-4-9-9V55Z" fill="#FFFDF7" stroke="#24495B" stroke-width="5.5" stroke-linejoin="round"/>
+  <circle cx="42" cy="61" r="2.7" fill="#24495B"/>
+  <circle cx="56" cy="61" r="2.7" fill="#24495B"/>
+  <path d="M42 70q7 7 14 0" fill="none" stroke="#24495B" stroke-width="3.5" stroke-linecap="round"/>
+  <circle cx="33" cy="68" r="3.5" fill="#F5A8A2" opacity=".9"/>
+  <path d="M82 48q15 16 0 32M92 38q25 26 0 52" fill="none" stroke="#24495B" stroke-width="6.5" stroke-linecap="round"/>
+</svg>

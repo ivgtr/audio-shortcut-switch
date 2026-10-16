@@ -1,4 +1,6 @@
-Audio Shortcut Switch 0.3.1 (Windows 10/11 x64)
+Audio Shortcut Switch 0.3.2 (Windows 10/11 x64)
+
+アプリ本体と作成するショートカットには PON アイコンを使用します。
 
 使い方
 1. この ZIP を展開し、AudioShortcutSwitch フォルダーを %LOCALAPPDATA% など

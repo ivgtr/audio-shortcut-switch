@@ -12,6 +12,7 @@ enum WorkerMessage {
 }
 
 struct Ui {
+    app_icon: nwg::Icon,
     window: nwg::Window,
     device_label: nwg::Label,
     devices_box: nwg::ComboBox<String>,
@@ -33,8 +34,13 @@ impl Ui {
         nwg::init().map_err(|e| format!("設定画面を初期化できません: {e}"))?;
         nwg::Font::set_global_family("Segoe UI")
             .map_err(|e| format!("設定画面のフォントを設定できません: {e}"))?;
+        let resources = nwg::EmbedResource::load(None)
+            .map_err(|e| format!("アプリアイコンを読み込めません: {e}"))?;
+        let app_icon = nwg::Icon::from_embed(&resources, Some(1), None)
+            .map_err(|e| format!("アプリアイコンを読み込めません: {e}"))?;
         let (sender, receiver) = mpsc::channel();
         let mut ui = Self {
+            app_icon,
             window: Default::default(),
             device_label: Default::default(),
             devices_box: Default::default(),
@@ -52,6 +58,7 @@ impl Ui {
         };
         nwg::Window::builder()
             .title("Audio Shortcut Switch - 設定")
+            .icon(Some(&ui.app_icon))
             .size((620, 290))
             .position((360, 240))
             .flags(nwg::WindowFlags::WINDOW | nwg::WindowFlags::VISIBLE)

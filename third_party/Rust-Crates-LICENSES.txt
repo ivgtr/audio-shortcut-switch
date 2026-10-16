@@ -1,4 +1,4 @@
-Rust dependency notices for Earbuds PC Switch 0.1.0
+Rust dependency notices for Audio Shortcut Switch 0.3.2
 
 The following crates are included in the Windows build. Their Cargo metadata declares the licenses shown below. For dual licensed crates, this distribution follows the MIT option.
 

@@ -10,6 +10,7 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use windows_sys::Win32::Foundation::{CloseHandle, ERROR_ALREADY_EXISTS, GetLastError, HANDLE};
 use windows_sys::Win32::System::Threading::CreateMutexW;
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::GetActiveWindow;
 use windows_sys::Win32::UI::WindowsAndMessaging::{MB_ICONERROR, MB_OK, MessageBoxW};
 
 mod registration;
@@ -133,13 +134,14 @@ fn wide(value: &OsStr) -> Vec<u16> {
     value.encode_wide().chain(std::iter::once(0)).collect()
 }
 
-fn error_dialog(message: &str) {
+pub(crate) fn error_dialog(message: &str) {
     let title = wide(OsStr::new("Audio Shortcut Switch"));
     let text = wide(OsStr::new(message));
-    // SAFETY: The two strings are zero-terminated and valid for this synchronous call.
+    // SAFETY: The strings are zero-terminated; GetActiveWindow returns this thread's
+    // active window, or null when no application window exists yet.
     unsafe {
         MessageBoxW(
-            std::ptr::null_mut(),
+            GetActiveWindow(),
             text.as_ptr(),
             title.as_ptr(),
             MB_OK | MB_ICONERROR,

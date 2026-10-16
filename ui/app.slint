@@ -1,0 +1,114 @@
+import { Button, ComboBox, LineEdit, Palette } from "std-widgets.slint";
+
+export component AppWindow inherits Window {
+    title: "Audio Shortcut Switch - 設定";
+    icon: @image-url("../assets/app.svg");
+    width: 600px;
+    height: 380px;
+    default-font-family: "Segoe UI";
+    default-font-size: 15px;
+    background: Palette.background;
+
+    in property <[string]> device-labels;
+    in-out property <int> selected-index: -1;
+    in-out property <string> shortcut-name;
+    in property <string> check-label: "接続確認";
+    in property <string> status: "機器を検出しています。";
+    in property <bool> busy: false;
+    callback refresh();
+    callback device-selected(int);
+    callback check();
+    callback create();
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 10px;
+
+        HorizontalLayout {
+            spacing: 12px;
+            Image {
+                source: @image-url("../assets/app.svg");
+                width: 42px;
+                height: 42px;
+            }
+            Text {
+                text: "ショートカットを作成";
+                color: Palette.foreground;
+                font-size: 22px;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+        }
+
+        Text {
+            text: "出力先";
+            color: Palette.foreground;
+            font-size: 14px;
+        }
+        HorizontalLayout {
+            spacing: 10px;
+            device-selection := ComboBox {
+                model: root.device-labels;
+                current-index <=> root.selected-index;
+                enabled: !root.busy;
+                height: 38px;
+                selected(value) => { root.device-selected(self.current-index); }
+            }
+            Button {
+                text: "再検出";
+                enabled: !root.busy;
+                width: 88px;
+                height: 38px;
+                clicked => { root.refresh(); }
+            }
+        }
+
+        Text {
+            text: "ショートカット名";
+            color: Palette.foreground;
+            font-size: 14px;
+        }
+        LineEdit {
+            text <=> root.shortcut-name;
+            enabled: !root.busy;
+            height: 38px;
+            font-size: 15px;
+        }
+
+        Text {
+            text: "作成時は音声を切り替えません。";
+            color: Palette.foreground;
+            font-size: 13px;
+        }
+
+        Rectangle { vertical-stretch: 1; background: transparent; }
+
+        HorizontalLayout {
+            spacing: 10px;
+            Button {
+                text: root.check-label;
+                enabled: !root.busy && root.selected-index >= 0;
+                width: 130px;
+                height: 38px;
+                clicked => { root.check(); }
+            }
+            Rectangle { horizontal-stretch: 1; background: transparent; }
+            Button {
+                text: "ショートカットを作成";
+                primary: true;
+                enabled: !root.busy && root.selected-index >= 0;
+                width: 205px;
+                height: 38px;
+                clicked => { root.create(); }
+            }
+        }
+
+        Text {
+            text: root.status;
+            color: Palette.foreground;
+            font-size: 13px;
+            wrap: word-wrap;
+            height: 36px;
+        }
+    }
+}

@@ -73,7 +73,7 @@ h2 { font-size: clamp(26px, 3vw, 36px); letter-spacing: -.04em; line-height: 1.3
 .closing p { margin: 0; color: #4e786e; font-size: 13px; }
 .closing .button { margin-left: auto; white-space: nowrap; }
 .site-footer { border-top: 1px solid #e5efeb; padding: 26px 0; color: #607780; font-size: 13px; }
-.site-footer .wrap { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.site-footer .wrap { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; }
 .site-footer a { text-decoration: none; color: #326e68; font-weight: 700; }
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; gap: 34px; min-height: 0; padding-block: 56px 66px; }

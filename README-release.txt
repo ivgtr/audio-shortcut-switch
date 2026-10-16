@@ -1,5 +1,6 @@
-Audio Shortcut Switch 0.3.3 (Windows 10/11 x64)
+Audio Shortcut Switch 0.4.0 (Windows 10/11 x64)
 
+設定画面を刷新しました。出力先の選択、接続確認、ショートカット作成を一画面で行えます。
 アプリ本体と作成するショートカットには PON アイコンを使用します。
 設定画面では現在利用可能な通常の再生出力だけを一覧に表示します。
 未接続の Bluetooth 機器は、自動接続用に引き続き表示します。
@@ -8,7 +9,7 @@ Audio Shortcut Switch 0.3.3 (Windows 10/11 x64)
 1. この ZIP を展開し、AudioShortcutSwitch フォルダーを %LOCALAPPDATA% など
    書き込み可能な場所に置きます。
    例: C:\Users\<ユーザー名>\AppData\Local\AudioShortcutSwitch\AudioShortcutSwitch.exe
-2. AudioShortcutSwitch.exe を開き、出力先とショートカット名を選んで「作成」を押します。
+2. AudioShortcutSwitch.exe を開き、出力先とショートカット名を選んで「ショートカットを作成」を押します。
    Bluetooth 機器は先に Windows でペアリングします。作成時は切り替えません。
 3. デスクトップのショートカットをクリックします。通常の出力機器はそのまま、
    Bluetooth 機器は接続と Stereo 出力の確認後に、Console と Multimedia の既定出力に設定します。
@@ -34,3 +35,5 @@ logs\switch.log に結果を残します。configs\*.json には機器固有の 
   利用条件: tools\SoundVolumeView\readme.txt
 
 Rust 依存ライブラリのライセンス情報: tools\Rust-Crates-LICENSES.txt
+設定画面には Slint を使用しています。ライセンスと帰属表示は上記ファイルと
+https://github.com/ivgtr/audio-shortcut-switch/ を参照してください。

@@ -1,23 +1,28 @@
 # Earbuds PC Switch
 
-Windows 10で、登録済みBluetoothイヤホンへの接続と、Stereo/A2DP再生出力への切り替えをデスクトップのショートカットから行うツールです。ConsoleとMultimediaの既定出力だけを変更します。
+Windows 10/11 x64 で、ペアリング済みの Bluetooth イヤホンへ接続し、Stereo/A2DP 再生出力を Console と Multimedia の既定に設定します。成功時は画面を出さず、失敗時はエラーを表示して `logs/switch.log` に記録します。
 
-## 現在の状態
+## ダウンロードと設定
 
-このリポジトリには実機で動作確認したPowerShell版のソースがあります。EXEと設定GUI、GitHub Releases用の完成品はまだ作成していません。機器固有の設定、ログ、ダウンロードした実行ファイルはリポジトリに含めません。
+1. [Releases](https://github.com/ivgtr/earbuds-pc-switch/releases/latest) の `EarbudsPC-0.1.0-win-x64.zip` をダウンロードします。GitHub の自動生成 Source code ZIP には実行ファイルがありません。
+2. ZIP を展開し、`EarbudsPC` フォルダーを `%LOCALAPPDATA%` に置きます。
+3. Windows でイヤホンをペアリングして電源を入れ、`EarbudsPC.exe` を起動します。
+4. 機器とショートカット名を選んで「作成」を押します。デスクトップにできたリンクから接続できます。
 
-Rustでの開発に使うツールチェーンは`mise.toml`で固定しています。`mise install`で導入し、`mise exec -- cargo --version`で確認できます。
+設定時は対象機器の Stereo 出力が使える必要があります。同じ名前のリンクがある場合は別名を入力してください。複数の機器のリンクも作成できます。設定は `configs/*.json` に保存され、機器 ID と Stereo 出力 ID を使って対象を照合します。
 
-PowerShell版は、登録済み機器のContainer IDと対応するStereo再生エンドポイントIDを設定ファイルに保存します。起動時に接続を要求し、期限内に使用可能になったことを確認してから既定出力を変更します。既に正しい状態なら接続や出力を変更しません。失敗時はログを残し、接続できない段階では現在の既定出力を維持します。
+## 開発と配布物
 
-## ソースの構成
+実装は Rust です。`mise.toml` は Rust 1.99.1 と Zig 0.15.1 を固定します。Windows EXE のクロスビルドには `cargo-zigbuild` 0.23.4 と `x86_64-pc-windows-gnu` ターゲットを使います。
 
-- `Switch-Earbuds.ps1`: ショートカットから実行する接続・出力切り替え処理
-- `Register-Earbuds.ps1`: 登録済み機器を正確な識別子とStereoエンドポイントで設定する処理
-- `New-Shortcut.ps1`: 実際のデスクトップの場所にショートカットを作成
-- `Launch-Earbuds.vbs`: 成功時に端末を表示せず起動
-- `configs/`: ローカルで作成した設定の保存先。設定の実データは公開しません。
+```sh
+mise install
+rustup target add x86_64-pc-windows-gnu
+cargo install cargo-zigbuild --version 0.23.4 --locked
+mise exec -- cargo test
+mise exec -- cargo zigbuild --target x86_64-pc-windows-gnu --release
+```
 
-このPCで検証した補助ツールは[ToothTrayCLI 0.2-cli-20260701](https://github.com/shunf4/ToothTrayCli/releases/tag/0.2-cli-20260701)と[SoundVolumeView 2.53](https://www.nirsoft.net/utils/sound_volume_view.html)です。補助ツールは開発元から取得し、`tools/ToothTrayCLI.exe`と`tools/SoundVolumeView/SoundVolumeView.exe`に配置します。両ツールの配布条件を確認した上で、公開用パッケージの構成を決めます。
+配布 ZIP には [ToothTrayCLI 0.2-cli-20260701](https://github.com/shunf4/ToothTrayCli/releases/tag/0.2-cli-20260701) と [SoundVolumeView 2.53](https://www.nirsoft.net/utils/sound_volume_view.html) を同梱します。`scripts/package_release.py` は指定した公式 ZIP の SHA-256 を検証し、SoundVolumeView の配布 ZIP の全ファイルと ToothTrayCLI のライセンスを含めてまとめます。補助ツールと実機の設定・ログはソース管理に含めません。
 
-GitHubで配布する完成品は、ソースの自動生成ZIPではなく、実機確認後のEXEを含むRelease assetにする予定です。
+`Switch-Earbuds.ps1`、`Register-Earbuds.ps1`、`New-Shortcut.ps1`、`Launch-Earbuds.vbs` は初期の PowerShell 実装です。配布 ZIP と Rust アプリはこれらを使用しません。

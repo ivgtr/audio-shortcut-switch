@@ -12,6 +12,7 @@
 /tools/
 /build/
 /dist/
+/target/
 /bin/
 /obj/
 *.exe

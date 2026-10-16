@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 230" role="img" aria-labelledby="title desc">
+  <title id="title">設定画面でショートカットを作成</title>
+  <desc id="desc">Bluetooth機器とショートカット名を選択し、作成ボタンを押す図</desc>
+  <rect width="400" height="230" rx="16" fill="#e7f7f0"/>
+  <circle cx="378" cy="-24" r="105" fill="#c9f4e7"/><circle cx="-18" cy="250" r="96" fill="#f8e8dc"/>
+  <rect x="20" y="16" width="360" height="198" rx="13" fill="#f8faf9" stroke="#b6cbc8"/>
+  <path d="M33 16h334a13 13 0 0 1 13 13v19H20V29a13 13 0 0 1 13-13Z" fill="#fffdfa"/>
+  <path d="M20 48h360" stroke="#dbe7e4"/>
+  <rect x="31" y="25" width="14" height="14" rx="4" fill="#c9f4e7"/>
+  <path d="M34 30h3l4-3v10l-4-3h-3Z" fill="#fffdfa" stroke="#24495b" stroke-width="1.3" stroke-linejoin="round"/>
+  <text x="53" y="37" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="12" fill="#24495b">Audio Shortcut Switch - 設定</text>
+  <text x="38" y="70" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="14" font-weight="700" fill="#24495b">切り替える再生出力</text>
+  <rect x="37" y="78" width="258" height="29" rx="4" fill="#fff" stroke="#a8bfbe"/>
+  <text x="47" y="98" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="14" fill="#24495b">[Bluetooth] イヤホン</text>
+  <path d="m279 90 5 5 5-5" fill="none" stroke="#24495b" stroke-width="2"/>
+  <rect x="303" y="78" width="59" height="29" rx="4" fill="#fff" stroke="#a8bfbe"/>
+  <text x="333" y="97" text-anchor="middle" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="12" fill="#24495b">再検出</text>
+  <text x="38" y="130" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="14" font-weight="700" fill="#24495b">デスクトップのショートカット名</text>
+  <rect x="37" y="138" width="325" height="28" rx="4" fill="#fff" stroke="#a8bfbe"/>
+  <text x="47" y="157" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="14" fill="#24495b">イヤホンを使う</text>
+  <rect x="37" y="177" width="82" height="28" rx="4" fill="#fff" stroke="#a8bfbe"/>
+  <text x="78" y="196" text-anchor="middle" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="12" fill="#24495b">接続確認</text>
+  <rect x="295" y="174" width="69" height="32" rx="5" fill="#2b796b"/>
+  <text x="329" y="196" text-anchor="middle" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="15" font-weight="700" fill="#fff">作成</text>
+  <path d="m341 204 1 18 5-6 6 8 4-3-6-8 8-2Z" fill="#24495b" stroke="#fffdfa" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>

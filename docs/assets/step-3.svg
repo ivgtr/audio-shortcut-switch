@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 230" role="img" aria-labelledby="title desc">
+  <title id="title">ショートカットから再生出力を切り替え</title>
+  <desc id="desc">PONアイコンのショートカットを開くと、Bluetoothイヤホンに接続し再生出力が切り替わる図</desc>
+  <defs>
+    <symbol id="pon" viewBox="0 0 128 128">
+      <rect x="5" y="5" width="118" height="118" rx="32" fill="#C9F4E7"/>
+      <path d="M24 55c0-5 4-9 9-9h12l16-13c5-4 11 0 11 6v50c0 6-6 10-11 6L45 82H33c-5 0-9-4-9-9V55Z" fill="#FFFDF7" stroke="#24495B" stroke-width="5.5" stroke-linejoin="round"/>
+      <circle cx="42" cy="61" r="2.7" fill="#24495B"/><circle cx="56" cy="61" r="2.7" fill="#24495B"/>
+      <path d="M42 70q7 7 14 0" fill="none" stroke="#24495B" stroke-width="3.5" stroke-linecap="round"/>
+      <circle cx="33" cy="68" r="3.5" fill="#F5A8A2" opacity=".9"/>
+      <path d="M82 48q15 16 0 32M92 38q25 26 0 52" fill="none" stroke="#24495B" stroke-width="6.5" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+  <rect width="400" height="230" rx="16" fill="#e7f7f0"/>
+  <circle cx="378" cy="-24" r="105" fill="#c9f4e7"/><circle cx="-18" cy="250" r="96" fill="#f8e8dc"/>
+  <rect x="28" y="38" width="139" height="153" rx="14" fill="#ffffffbc" stroke="#c7e3d8"/>
+  <use href="#pon" x="61" y="56" width="74" height="74"/>
+  <text x="98" y="151" text-anchor="middle" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="15" font-weight="700" fill="#24495b">ショートカット</text>
+  <text x="98" y="171" text-anchor="middle" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="12" fill="#5a737c">ダブルクリック</text>
+  <path d="M184 112h27m-10-10 10 10-10 10" fill="none" stroke="#2b9079" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="229" y="28" width="149" height="173" rx="14" fill="#fffdfa" stroke="#d8e7e4"/>
+  <text x="246" y="56" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="14" font-weight="700" fill="#24495b">再生出力</text>
+  <text x="247" y="91" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="14" fill="#8ba1a3" text-decoration="line-through">スピーカー</text>
+  <path d="M256 102v13m-5-5 5 5 5-5" fill="none" stroke="#2b9079" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="243" y="122" width="120" height="36" rx="8" fill="#dff6e9" stroke="#8ed7bb"/>
+  <text x="303" y="146" text-anchor="middle" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="14" font-weight="700" fill="#256f61">イヤホン</text>
+  <text x="303" y="181" text-anchor="middle" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="12" fill="#4c7e70">Bluetooth接続済み</text>
+</svg>

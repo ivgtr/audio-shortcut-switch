@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 230" role="img" aria-labelledby="title desc">
+  <title id="title">ZIPを展開してアプリを起動</title>
+  <desc id="desc">ダウンロードしたZIPからAudio Shortcut Switchの実行ファイルを取り出す図</desc>
+  <defs>
+    <symbol id="pon" viewBox="0 0 128 128">
+      <rect x="5" y="5" width="118" height="118" rx="32" fill="#C9F4E7"/>
+      <path d="M24 55c0-5 4-9 9-9h12l16-13c5-4 11 0 11 6v50c0 6-6 10-11 6L45 82H33c-5 0-9-4-9-9V55Z" fill="#FFFDF7" stroke="#24495B" stroke-width="5.5" stroke-linejoin="round"/>
+      <circle cx="42" cy="61" r="2.7" fill="#24495B"/><circle cx="56" cy="61" r="2.7" fill="#24495B"/>
+      <path d="M42 70q7 7 14 0" fill="none" stroke="#24495B" stroke-width="3.5" stroke-linecap="round"/>
+      <circle cx="33" cy="68" r="3.5" fill="#F5A8A2" opacity=".9"/>
+      <path d="M82 48q15 16 0 32M92 38q25 26 0 52" fill="none" stroke="#24495B" stroke-width="6.5" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+  <rect width="400" height="230" rx="16" fill="#e7f7f0"/>
+  <circle cx="378" cy="-24" r="105" fill="#c9f4e7"/><circle cx="-18" cy="250" r="96" fill="#f8e8dc"/>
+  <rect x="23" y="27" width="144" height="176" rx="15" fill="#fffdfa" stroke="#d8e7e4"/>
+  <path d="M75 57h45l15 15v58H75Z" fill="#f7fcfa" stroke="#648b88" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M120 57v16h15" fill="none" stroke="#648b88" stroke-width="2"/>
+  <path d="M97 65v51" stroke="#648b88" stroke-width="2.5" stroke-dasharray="5 5"/>
+  <rect x="79" y="117" width="51" height="23" rx="6" fill="#d4eee3"/>
+  <text x="104" y="133" text-anchor="middle" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="15" font-weight="700" fill="#24495b">ZIP</text>
+  <text x="95" y="177" text-anchor="middle" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="17" font-weight="700" fill="#24495b">ZIPを展開</text>
+  <path d="M185 115h27m-10-10 10 10-10 10" fill="none" stroke="#2b9079" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="232" y="27" width="144" height="176" rx="15" fill="#fffdfa" stroke="#d8e7e4"/>
+  <use href="#pon" x="266" y="53" width="76" height="76"/>
+  <text x="304" y="160" text-anchor="middle" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="17" font-weight="700" fill="#24495b">アプリを起動</text>
+  <text x="304" y="182" text-anchor="middle" font-family="Segoe UI, Noto Sans JP, sans-serif" font-size="11" fill="#5a737c">AudioShortcutSwitch.exe</text>
+</svg>

@@ -1,0 +1,22 @@
+# Local machine data and workspace metadata
+/.agents/
+/.aws/
+/.codex/
+/.local/
+/.env
+/.env.*
+/configs/*.json
+/logs/
+
+# Downloaded tools and generated packages
+/tools/
+/build/
+/dist/
+/bin/
+/obj/
+*.exe
+*.lnk
+*.pdb
+*.iobj
+*.ipdb
+*.zip

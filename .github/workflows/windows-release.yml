@@ -1,0 +1,49 @@
+name: Windows release build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Install Rust toolchain
+        shell: pwsh
+        run: |
+          rustup toolchain install 1.99.1 --profile minimal
+          rustup target add x86_64-pc-windows-msvc --toolchain 1.99.1
+      - name: Test
+        shell: pwsh
+        run: cargo +1.99.1 test --locked
+      - name: Build Windows EXE
+        shell: pwsh
+        run: |
+          $env:RUSTFLAGS = "--remap-path-prefix=$env:GITHUB_WORKSPACE=/src --remap-path-prefix=$env:USERPROFILE=/rust"
+          cargo +1.99.1 build --release --locked --target x86_64-pc-windows-msvc
+      - name: Download pinned helper tools
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Invoke-WebRequest 'https://github.com/shunf4/ToothTrayCli/releases/download/0.2-cli-20260701/ToothTrayCLI.zip' -OutFile "$env:RUNNER_TEMP\ToothTrayCLI.zip"
+          Invoke-WebRequest 'https://www.nirsoft.net/utils/soundvolumeview-x64.zip' -OutFile "$env:RUNNER_TEMP\soundvolumeview-x64.zip"
+      - name: Package verified release
+        shell: pwsh
+        run: |
+          python scripts/package_release.py `
+            --exe target/x86_64-pc-windows-msvc/release/earbuds-pc.exe `
+            --toothtray-zip "$env:RUNNER_TEMP\ToothTrayCLI.zip" `
+            --soundvolumeview-zip "$env:RUNNER_TEMP\soundvolumeview-x64.zip" `
+            --output dist/EarbudsPC-0.1.0-win-x64.zip
+          $hash = (Get-FileHash dist/EarbudsPC-0.1.0-win-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "SHA-256: ``$hash``" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EarbudsPC-0.1.0-win-x64
+          path: dist/EarbudsPC-0.1.0-win-x64.zip
+          if-no-files-found: error

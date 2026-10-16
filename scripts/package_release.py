@@ -4,6 +4,7 @@
 import argparse
 import hashlib
 import io
+import re
 import zipfile
 from pathlib import Path
 
@@ -11,6 +12,17 @@ from pathlib import Path
 TOOTHTRAY_SHA256 = "0c1b90761654d61dcd52cba23d1a82e5e576dcd4c6fa678618b815ff113e75d9"
 SOUNDVOLUMEVIEW_SHA256 = "ee2c45553fb9fb31b71db88b537c18e25c1a387a4a9009d081bdb38265c68e1f"
 SOUNDVOLUMEVIEW_FILES = {"SoundVolumeView.exe", "SoundVolumeView.chm", "readme.txt"}
+BUILD_PATH = re.compile(rb"(?i)(?:/home/|/users/|[a-z]:\\users\\|\\home\\)")
+
+
+def checked_exe(path: Path) -> bytes:
+    data = path.read_bytes()
+    if data[:2] != b"MZ":
+        raise ValueError("Windows EXE is missing or invalid")
+    decoded = (data[offset:].decode("utf-16le", errors="ignore").encode("utf-8") for offset in (0, 1))
+    if BUILD_PATH.search(data) or any(BUILD_PATH.search(text) for text in decoded):
+        raise ValueError("Windows EXE contains an absolute user build path")
+    return data
 
 
 def verified_bytes(path: Path, expected_sha256: str) -> bytes:
@@ -29,8 +41,7 @@ def add_file(archive: zipfile.ZipFile, destination: str, data: bytes) -> None:
 
 
 def package(exe: Path, toothtray_zip: Path, soundvolumeview_zip: Path, output: Path) -> None:
-    if not exe.is_file() or exe.read_bytes()[:2] != b"MZ":
-        raise ValueError("Windows EXE is missing or invalid")
+    executable = checked_exe(exe)
     toothtray = verified_bytes(toothtray_zip, TOOTHTRAY_SHA256)
     soundvolumeview = verified_bytes(soundvolumeview_zip, SOUNDVOLUMEVIEW_SHA256)
     with zipfile.ZipFile(io.BytesIO(toothtray)) as upstream:
@@ -43,7 +54,7 @@ def package(exe: Path, toothtray_zip: Path, soundvolumeview_zip: Path, output: P
     root = Path(__file__).resolve().parent.parent
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, "w") as archive:
-        add_file(archive, "EarbudsPC.exe", exe.read_bytes())
+        add_file(archive, "EarbudsPC.exe", executable)
         add_file(archive, "README.txt", (root / "README-release.txt").read_bytes())
         add_file(archive, "tools/ToothTrayCLI.exe", bluetooth)
         add_file(archive, "tools/ToothTrayCLI-LICENSE.md", (root / "third_party/ToothTrayCLI-LICENSE.md").read_bytes())

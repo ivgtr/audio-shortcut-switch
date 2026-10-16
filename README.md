@@ -13,14 +13,8 @@ Windows 10/11 x64 で、ペアリング済みの Bluetooth イヤホンへ接続
 
 ## 開発と配布物
 
-実装は Rust です。`mise.toml` は Rust 1.99.1 と Zig 0.15.1 を固定します。Windows EXE のクロスビルドには `cargo-zigbuild` 0.23.4 と `x86_64-pc-windows-gnu` ターゲットを使います。
+実装は Rust です。配布用 EXE と ZIP は [GitHub Actions の Windows ワークフロー](.github/workflows/windows-release.yml)で作成します。ワークフローは Rust 1.99.1 と MSVC ターゲットを使い、EXE 内のユーザーフォルダーパスを検査します。Actions の「Run workflow」で実行し、完了後に `EarbudsPC-0.1.0-win-x64.zip` を成果物から取得できます。
 
-```sh
-mise install
-rustup target add x86_64-pc-windows-gnu
-cargo install cargo-zigbuild --version 0.23.4 --locked
-mise exec -- cargo test
-mise exec -- cargo zigbuild --target x86_64-pc-windows-gnu --release
-```
+ローカルでは `mise exec -- cargo test` で単体テストを実行できます。配布物のビルドは Windows ワークフローを使います。
 
 配布 ZIP には [ToothTrayCLI 0.2-cli-20260701](https://github.com/shunf4/ToothTrayCli/releases/tag/0.2-cli-20260701) と [SoundVolumeView 2.53](https://www.nirsoft.net/utils/sound_volume_view.html) を同梱します。`scripts/package_release.py` は指定した公式 ZIP の SHA-256 を検証し、SoundVolumeView の配布 ZIP の全ファイルと ToothTrayCLI のライセンスを含めてまとめます。補助ツールと実機の設定・ログはソース管理に含めません。

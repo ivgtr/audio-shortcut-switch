@@ -14,7 +14,7 @@ Windows が Stereo 出力 ID をまだ保持していない場合は、一度「
 
 ## 開発と配布物
 
-実装は Rust です。配布用 EXE と ZIP は [GitHub Actions の Windows ワークフロー](.github/workflows/windows-release.yml)で作成します。ワークフローは Rust 1.99.1 と MSVC ターゲットを使い、EXE 内のユーザーフォルダーパスを検査します。
+実装は Rust です。配布用 EXE と ZIP は [GitHub Actions の Windows ワークフロー](.github/workflows/windows-release.yml)で作成し、バージョンタグの push 時に Release へ公開します。ワークフローは Rust 1.99.1 と MSVC ターゲットを使い、EXE 内のユーザーフォルダーパスを検査します。
 
 ローカルでは `mise exec -- cargo test` で単体テストを実行できます。配布物のビルドは Windows ワークフローを使います。
 

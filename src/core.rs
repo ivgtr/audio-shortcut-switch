@@ -133,7 +133,11 @@ pub fn parse_audio_state(
     })
 }
 
-pub fn find_active_endpoint(json: &[u8], stereo_name: &str) -> Result<Option<String>, String> {
+fn find_stereo_endpoint(
+    json: &[u8],
+    stereo_name: &str,
+    active_only: bool,
+) -> Result<Option<String>, String> {
     let bytes = json.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(json);
     let items: serde_json::Value =
         serde_json::from_slice(bytes).map_err(|e| format!("音声機器一覧のJSONが不正です: {e}"))?;
@@ -146,7 +150,7 @@ pub fn find_active_endpoint(json: &[u8], stereo_name: &str) -> Result<Option<Str
         if field("Type") == Some("Device")
             && field("Direction") == Some("Render")
             && field("Device Name") == Some(stereo_name)
-            && field("Device State") == Some("Active")
+            && (!active_only || field("Device State") == Some("Active"))
         {
             let id = field("Item ID").ok_or("Stereo出力のIDがありません。")?;
             if !valid_endpoint_id(id) {
@@ -158,6 +162,14 @@ pub fn find_active_endpoint(json: &[u8], stereo_name: &str) -> Result<Option<Str
         }
     }
     Ok(found)
+}
+
+pub fn find_endpoint(json: &[u8], stereo_name: &str) -> Result<Option<String>, String> {
+    find_stereo_endpoint(json, stereo_name, false)
+}
+
+pub fn find_active_endpoint(json: &[u8], stereo_name: &str) -> Result<Option<String>, String> {
+    find_stereo_endpoint(json, stereo_name, true)
 }
 
 fn valid_guid(value: &str) -> bool {
@@ -228,19 +240,21 @@ mod tests {
     }
 
     #[test]
-    fn registration_requires_a_unique_active_stereo_endpoint() {
+    fn registration_accepts_an_inactive_but_unique_stereo_endpoint() {
         let item = format!(
-            r#"{{"Type":"Device","Direction":"Render","Device Name":"AirPods Stereo","Device State":"Active","Item ID":"{ENDPOINT}"}}"#
+            r#"{{"Type":"Device","Direction":"Render","Device Name":"AirPods Stereo","Device State":"Not Present","Item ID":"{ENDPOINT}"}}"#
+        );
+        assert_eq!(
+            find_endpoint(format!("[{item}]").as_bytes(), "AirPods Stereo").unwrap(),
+            Some(ENDPOINT.to_owned())
         );
         assert_eq!(
             find_active_endpoint(format!("[{item}]").as_bytes(), "AirPods Stereo").unwrap(),
-            Some(ENDPOINT.to_owned())
+            None
         );
-        assert!(
-            find_active_endpoint(format!("[{item},{item}]").as_bytes(), "AirPods Stereo").is_err()
-        );
+        assert!(find_endpoint(format!("[{item},{item}]").as_bytes(), "AirPods Stereo").is_err());
         assert_eq!(
-            find_active_endpoint(format!("[{item}]").as_bytes(), "Another Device").unwrap(),
+            find_endpoint(format!("[{item}]").as_bytes(), "Another Device").unwrap(),
             None
         );
     }

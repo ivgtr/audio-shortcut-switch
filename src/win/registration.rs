@@ -1,4 +1,4 @@
-use super::{ToolPaths, audio_command, bluetooth_command, bluetooth_connected, wide};
+use super::{SwitchMutex, ToolPaths, audio_command, bluetooth_command, bluetooth_connected, wide};
 use crate::core::{self, Config};
 use std::ffi::{OsStr, OsString, c_void};
 use std::fs::{self, OpenOptions};
@@ -53,15 +53,9 @@ impl Drop for DeviceInfoSet {
     }
 }
 
-pub(super) fn stereo_driver_name(container_id: &str) -> Result<String, String> {
-    let handle = unsafe {
-        SetupDiGetClassDevsW(
-            &GUID_DEVCLASS_MEDIA,
-            ptr::null(),
-            ptr::null_mut(),
-            DIGCF_PRESENT,
-        )
-    };
+fn stereo_driver_name_with_flags(container_id: &str, flags: u32) -> Result<String, String> {
+    let handle =
+        unsafe { SetupDiGetClassDevsW(&GUID_DEVCLASS_MEDIA, ptr::null(), ptr::null_mut(), flags) };
     if handle == INVALID_HANDLE_VALUE as isize {
         return Err(format!(
             "音声ドライバー一覧を取得できません: {}",
@@ -159,13 +153,26 @@ pub(super) fn stereo_driver_name(container_id: &str) -> Result<String, String> {
         }
         names.push(text);
     }
+    if names.is_empty() {
+        return Err("このBluetooth機器のA2DP Stereoドライバーが見つかりません。初回接続後に再試行してください。".into());
+    }
     if names.len() != 1 {
-        return Err("このBluetooth機器のA2DP Stereoドライバーを一意に確認できません。".into());
+        return Err("このBluetooth機器のA2DP Stereoドライバーが複数あります。".into());
     }
     Ok(names.remove(0))
 }
 
-fn active_endpoint(tools: &ToolPaths, stereo_name: &str) -> Result<Option<String>, String> {
+pub(super) fn stereo_driver_name(container_id: &str) -> Result<String, String> {
+    stereo_driver_name_with_flags(container_id, DIGCF_PRESENT)
+}
+
+fn stereo_driver_name_any_state(container_id: &str) -> Result<String, String> {
+    stereo_driver_name_with_flags(container_id, 0)
+}
+
+fn sound_items(tools: &ToolPaths) -> Result<Vec<u8>, String> {
+    fs::create_dir_all(tools.base.join("logs"))
+        .map_err(|e| format!("音声機器一覧の保存先を作れません: {e}"))?;
     let path = tools
         .base
         .join("logs")
@@ -177,15 +184,48 @@ fn active_endpoint(tools: &ToolPaths, stereo_name: &str) -> Result<Option<String
             &[
                 OsString::from("/SaveFileEncoding"),
                 OsString::from("3"),
+                OsString::from("/ShowUnpluggedDevices"),
+                OsString::from("1"),
+                OsString::from("/ShowDisabledDevices"),
+                OsString::from("1"),
                 OsString::from("/sjson"),
                 path.as_os_str().to_owned(),
             ],
         )?;
-        let bytes = fs::read(&path).map_err(|e| format!("音声機器一覧を読めません: {e}"))?;
-        core::find_active_endpoint(&bytes, stereo_name)
+        fs::read(&path).map_err(|e| format!("音声機器一覧を読めません: {e}"))
     })();
     let _ = fs::remove_file(&path);
     result
+}
+
+pub(super) fn check_device(id: &str) -> Result<(), String> {
+    let tools = ToolPaths::locate()?;
+    tools.require_tools()?;
+    let devices = super::list_bluetooth()?;
+    core::verify_registered_device(&devices, id)?;
+    let Some(_lock) = SwitchMutex::acquire()? else {
+        return Err("別の切り替え処理が実行中です。".into());
+    };
+    if !bluetooth_connected(&tools, id)? {
+        bluetooth_command(
+            &tools,
+            &["connect-by-container-id", id],
+            Duration::from_secs(15),
+        )?;
+    }
+    let stereo_name = stereo_driver_name(id)?;
+    let deadline = Instant::now() + Duration::from_secs(35);
+    loop {
+        if bluetooth_connected(&tools, id)?
+            && core::find_active_endpoint(&sound_items(&tools)?, &stereo_name)?.is_some()
+        {
+            return Ok(());
+        }
+        if Instant::now() >= deadline {
+            return Err("35秒以内にイヤホンのStereo出力を確認できませんでした。".into());
+        }
+        thread::sleep(Duration::from_millis(700));
+    }
 }
 
 fn desktop_path() -> Result<PathBuf, String> {
@@ -323,26 +363,9 @@ pub(super) fn register_device(id: &str, shortcut_name: &str) -> Result<(), Strin
             return Err("既存設定とBluetooth機器が一致しません。".into());
         }
     } else {
-        let stereo_name = stereo_driver_name(id)?;
-        if !bluetooth_connected(&tools, id)? {
-            bluetooth_command(
-                &tools,
-                &["connect-by-container-id", id],
-                Duration::from_secs(15),
-            )?;
-        }
-        let deadline = Instant::now() + Duration::from_secs(35);
-        let endpoint_id = loop {
-            if bluetooth_connected(&tools, id)? {
-                if let Some(id) = active_endpoint(&tools, &stereo_name)? {
-                    break id;
-                }
-            }
-            if Instant::now() >= deadline {
-                return Err("35秒以内にStereo出力を確認できませんでした。".into());
-            }
-            thread::sleep(Duration::from_millis(700));
-        };
+        let stereo_name = stereo_driver_name_any_state(id)?;
+        let endpoint_id = core::find_endpoint(&sound_items(&tools)?, &stereo_name)?
+            .ok_or("Stereo出力IDを取得できません。初回接続後に再試行してください。")?;
         let config = Config {
             schema_version: 1,
             display_name: device_name,

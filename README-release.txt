@@ -1,14 +1,18 @@
-Earbuds PC Switch 0.1.0 (Windows 10/11 x64)
+Earbuds PC Switch 0.2.0 (Windows 10/11 x64)
 
 使い方
 1. この ZIP を展開し、EarbudsPC フォルダーを %LOCALAPPDATA% に置きます。
    例: C:\Users\<ユーザー名>\AppData\Local\EarbudsPC\EarbudsPC.exe
-2. Bluetooth イヤホンを Windows でペアリングし、電源を入れます。
+2. Bluetooth イヤホンを Windows でペアリングします。
 3. EarbudsPC.exe を開き、機器とショートカット名を選んで「作成」を押します。
-4. デスクトップに作られたショートカットをクリックすると、その機器へ接続し、
+   作成時にイヤホンへ接続しません。
+4. 接続を事前に試す場合は、イヤホンの電源を入れて「接続確認」を押します。
+   Bluetooth接続とStereo出力を確認します。既定出力は変更しません。
+5. デスクトップに作られたショートカットをクリックすると、その機器へ接続し、
    Stereo 再生出力を Console と Multimedia の既定に設定します。
 
-設定を作るときは対象機器の Stereo 出力が使える状態である必要があります。
+Windows が Stereo 出力 ID をまだ保持していない場合は、
+一度「接続確認」を実行してからショートカットを作成してください。
 同じ名前のショートカットが既にある場合は、別の名前を入力してください。
 別の機器用のショートカットも同じ設定画面で作成できます。
 

@@ -9,6 +9,7 @@ use std::thread;
 enum WorkerMessage {
     Devices(Result<Vec<BluetoothDevice>, String>),
     Registered(Result<(), String>),
+    Checked(Result<(), String>),
 }
 
 struct Ui {
@@ -19,6 +20,7 @@ struct Ui {
     shortcut_label: nwg::Label,
     shortcut_input: nwg::TextInput,
     create_button: nwg::Button,
+    check_button: nwg::Button,
     status_label: nwg::Label,
     notice: nwg::Notice,
     devices: RefCell<Vec<BluetoothDevice>>,
@@ -41,6 +43,7 @@ impl Ui {
             shortcut_label: Default::default(),
             shortcut_input: Default::default(),
             create_button: Default::default(),
+            check_button: Default::default(),
             status_label: Default::default(),
             notice: Default::default(),
             devices: RefCell::new(Vec::new()),
@@ -50,7 +53,7 @@ impl Ui {
         };
         nwg::Window::builder()
             .title("Earbuds PC Switch - 設定")
-            .size((520, 245))
+            .size((520, 290))
             .position((360, 240))
             .flags(nwg::WindowFlags::WINDOW | nwg::WindowFlags::VISIBLE)
             .build(&mut ui.window)
@@ -85,20 +88,27 @@ impl Ui {
             .map_err(|e| e.to_string())?;
         nwg::TextInput::builder()
             .position((20, 120))
-            .size((375, 28))
+            .size((475, 28))
             .parent(&ui.window)
             .build(&mut ui.shortcut_input)
             .map_err(|e| e.to_string())?;
         nwg::Button::builder()
+            .text("接続確認")
+            .position((20, 162))
+            .size((110, 28))
+            .parent(&ui.window)
+            .build(&mut ui.check_button)
+            .map_err(|e| e.to_string())?;
+        nwg::Button::builder()
             .text("作成")
-            .position((405, 120))
+            .position((405, 162))
             .size((90, 28))
             .parent(&ui.window)
             .build(&mut ui.create_button)
             .map_err(|e| e.to_string())?;
         nwg::Label::builder()
             .text("機器を検出しています。")
-            .position((20, 163))
+            .position((20, 205))
             .size((475, 56))
             .parent(&ui.window)
             .build(&mut ui.status_label)
@@ -114,6 +124,8 @@ impl Ui {
         self.busy.set(busy);
         self.refresh_button.set_enabled(!busy);
         self.create_button
+            .set_enabled(!busy && !self.devices.borrow().is_empty());
+        self.check_button
             .set_enabled(!busy && !self.devices.borrow().is_empty());
         self.devices_box.set_enabled(!busy);
         self.shortcut_input.set_enabled(!busy);
@@ -167,15 +179,34 @@ impl Ui {
             );
             return;
         }
-        self.set_busy(
-            true,
-            "接続とStereo出力を確認し、ショートカットを作成しています。",
-        );
+        self.set_busy(true, "設定を保存し、ショートカットを作成しています。");
         let sender = self.sender.clone();
         let notice = self.notice.sender();
         thread::spawn(move || {
             let result = win::register_device(&device.container_id, &name);
             let _ = sender.send(WorkerMessage::Registered(result));
+            notice.notice();
+        });
+    }
+
+    fn check(&self) {
+        if self.busy.get() {
+            return;
+        }
+        let Some(device) = self.selected() else {
+            nwg::modal_error_message(
+                &self.window,
+                "機器を選択",
+                "Bluetooth機器を選択してください。",
+            );
+            return;
+        };
+        self.set_busy(true, "Bluetooth接続とStereo出力を確認しています。");
+        let sender = self.sender.clone();
+        let notice = self.notice.sender();
+        thread::spawn(move || {
+            let result = win::check_device(&device.container_id);
+            let _ = sender.send(WorkerMessage::Checked(result));
             notice.notice();
         });
     }
@@ -201,7 +232,10 @@ impl Ui {
                         self.update_shortcut_name();
                     }
                     let count = self.devices.borrow().len();
-                    self.set_busy(false, &format!("{count}件の登録済み機器を検出しました。"));
+                    self.set_busy(
+                        false,
+                        &format!("{count}件の登録済み機器を検出しました。作成時は接続しません。"),
+                    );
                 }
                 WorkerMessage::Devices(Err(error)) => {
                     self.devices_box.set_collection(Vec::new());
@@ -214,12 +248,24 @@ impl Ui {
                     nwg::modal_info_message(
                         &self.window,
                         "作成完了",
-                        "デスクトップにショートカットを作成しました。続けて別の機器も設定できます。",
+                        "デスクトップにショートカットを作成しました。接続は未確認です。必要なら「接続確認」を押してください。",
                     );
                 }
                 WorkerMessage::Registered(Err(error)) => {
                     self.set_busy(false, "作成に失敗しました。設定を確認してください。");
                     nwg::modal_error_message(&self.window, "作成失敗", &error);
+                }
+                WorkerMessage::Checked(Ok(())) => {
+                    self.set_busy(false, "Bluetooth接続とStereo出力を確認しました。");
+                    nwg::modal_info_message(
+                        &self.window,
+                        "確認完了",
+                        "Bluetooth接続とStereo出力を確認しました。既定出力は変更していません。",
+                    );
+                }
+                WorkerMessage::Checked(Err(error)) => {
+                    self.set_busy(false, "接続を確認できませんでした。");
+                    nwg::modal_error_message(&self.window, "確認失敗", &error);
                 }
             }
         }
@@ -247,6 +293,9 @@ pub fn run() -> Result<(), String> {
             }
             nwg::Event::OnButtonClick if handle == handler_ui.create_button.handle => {
                 handler_ui.register();
+            }
+            nwg::Event::OnButtonClick if handle == handler_ui.check_button.handle => {
+                handler_ui.check();
             }
             nwg::Event::OnComboxBoxSelection if handle == handler_ui.devices_box.handle => {
                 handler_ui.update_shortcut_name();

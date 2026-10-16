@@ -39,11 +39,11 @@ jobs:
             --exe target/x86_64-pc-windows-msvc/release/earbuds-pc.exe `
             --toothtray-zip "$env:RUNNER_TEMP\ToothTrayCLI.zip" `
             --soundvolumeview-zip "$env:RUNNER_TEMP\soundvolumeview-x64.zip" `
-            --output dist/EarbudsPC-0.1.0-win-x64.zip
-          $hash = (Get-FileHash dist/EarbudsPC-0.1.0-win-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+            --output dist/EarbudsPC-0.2.0-win-x64.zip
+          $hash = (Get-FileHash dist/EarbudsPC-0.2.0-win-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
           "SHA-256: ``$hash``" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
       - uses: actions/upload-artifact@v4
         with:
-          name: EarbudsPC-0.1.0-win-x64
-          path: dist/EarbudsPC-0.1.0-win-x64.zip
+          name: EarbudsPC-0.2.0-win-x64
+          path: dist/EarbudsPC-0.2.0-win-x64.zip
           if-no-files-found: error

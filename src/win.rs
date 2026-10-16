@@ -258,6 +258,19 @@ pub(crate) fn register_device(id: &str, shortcut_name: &str) -> Result<(), Strin
     result
 }
 
+pub(crate) fn check_device(id: &str) -> Result<(), String> {
+    let result = registration::check_device(id);
+    if let Ok(tools) = ToolPaths::locate() {
+        if let Ok(logger) = Logger::new(tools.log_path()) {
+            match &result {
+                Ok(()) => logger.write(&format!("接続確認成功: {id}")),
+                Err(error) => logger.write(&format!("接続確認失敗: {id}: {error}")),
+            }
+        }
+    }
+    result
+}
+
 fn switch(config_path: &Path, tools: &ToolPaths, log: &Logger) -> Result<(), String> {
     let Some(_lock) = SwitchMutex::acquire()? else {
         log.write("重複起動を無視しました。");

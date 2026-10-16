@@ -38,7 +38,6 @@ def generate() -> str:
         ["cargo", "metadata", "--locked", "--filter-platform", TARGET, "--format-version", "1"],
         cwd=ROOT,
         capture_output=True,
-        text=True,
         check=True,
     )
     metadata = json.loads(result.stdout)

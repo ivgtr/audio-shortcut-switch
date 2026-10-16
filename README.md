@@ -6,12 +6,14 @@
 
 [Windows 10/11 x64 用 ZIP をダウンロード](https://github.com/ivgtr/audio-shortcut-switch/releases/latest)
 
+<a href="https://slint.dev/"><img src="docs/assets/made-with-slint.png" alt="Made with Slint" width="106"></a>
+
 [図で見る使い方](https://ivgtr.github.io/audio-shortcut-switch/)
 
 ## 使い方
 
 1. ZIP を書き込み可能な場所に展開し、`AudioShortcutSwitch.exe` を起動します。Bluetooth 機器は先に Windows でペアリングします。
-2. 出力先とショートカット名を選び、「作成」を押します。
+2. 出力先とショートカット名を選び、「ショートカットを作成」を押します。
 3. 使いたい出力先のショートカットをクリックします。通常の出力はそのまま既定に設定し、Bluetooth は接続と Stereo 出力の確認後に設定します。
 
 作成時は出力を切り替えません。Bluetooth 機器の Stereo 出力がまだ見つからない場合は、イヤホンの電源を入れ、「接続確認」で一度接続してから作成してください。確認ボタンは既定の出力を変更しません。

@@ -37,6 +37,9 @@ jobs:
           }
           "version=$version" >> $env:GITHUB_OUTPUT
           "asset_name=AudioShortcutSwitch-$version-win-x64.zip" >> $env:GITHUB_OUTPUT
+      - name: Verify Rust dependency notices
+        shell: pwsh
+        run: python scripts/generate_rust_licenses.py --check
       - name: Test
         shell: pwsh
         run: cargo +1.99.1 test --locked

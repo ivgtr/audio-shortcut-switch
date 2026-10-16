@@ -1,6 +1,8 @@
-Audio Shortcut Switch 0.3.2 (Windows 10/11 x64)
+Audio Shortcut Switch 0.3.3 (Windows 10/11 x64)
 
 アプリ本体と作成するショートカットには PON アイコンを使用します。
+設定画面では現在利用可能な通常の再生出力だけを一覧に表示します。
+未接続の Bluetooth 機器は、自動接続用に引き続き表示します。
 
 使い方
 1. この ZIP を展開し、AudioShortcutSwitch フォルダーを %LOCALAPPDATA% など

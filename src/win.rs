@@ -272,7 +272,12 @@ pub(crate) fn list_choices() -> Result<ChoiceList, String> {
         Err(error) => (Vec::new(), Some(error)),
     };
     let mut choices: Vec<_> = bluetooth.into_iter().map(DeviceChoice::Bluetooth).collect();
-    choices.extend(audio.into_iter().map(DeviceChoice::Audio));
+    choices.extend(
+        audio
+            .into_iter()
+            .filter(|endpoint| endpoint.active)
+            .map(DeviceChoice::Audio),
+    );
     Ok(ChoiceList {
         choices,
         bluetooth_error,

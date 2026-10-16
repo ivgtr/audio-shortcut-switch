@@ -233,14 +233,8 @@ impl Ui {
                             DeviceChoice::Bluetooth(device) => {
                                 format!("[Bluetooth] {}", device.name)
                             }
-                            DeviceChoice::Audio(endpoint) if endpoint.active => {
-                                format!("[出力のみ] {} ({})", endpoint.name, endpoint.device_name)
-                            }
                             DeviceChoice::Audio(endpoint) => {
-                                format!(
-                                    "[出力のみ・現在利用不可] {} ({})",
-                                    endpoint.name, endpoint.device_name
-                                )
+                                format!("[出力のみ] {} ({})", endpoint.name, endpoint.device_name)
                             }
                         })
                         .collect();

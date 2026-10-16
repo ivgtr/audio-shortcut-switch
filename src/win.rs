@@ -1,4 +1,4 @@
-use crate::core::{self, AudioState, BluetoothDevice, Config};
+use crate::core::{self, AudioEndpoint, AudioState, BluetoothDevice, Config, Target};
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
@@ -15,6 +15,17 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{MB_ICONERROR, MB_OK, MessageBo
 mod registration;
 
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+#[derive(Clone)]
+pub(crate) enum DeviceChoice {
+    Bluetooth(BluetoothDevice),
+    Audio(AudioEndpoint),
+}
+
+pub(crate) struct ChoiceList {
+    pub choices: Vec<DeviceChoice>,
+    pub bluetooth_error: Option<String>,
+}
 
 #[derive(Clone)]
 struct ToolPaths {
@@ -38,11 +49,16 @@ impl ToolPaths {
         })
     }
 
-    fn require_tools(&self) -> Result<(), String> {
-        if !self.bluetooth.is_file() || !self.audio.is_file() {
-            return Err(
-                "補助ツールが見つかりません。配布物をインストールし直してください。".into(),
-            );
+    fn require_audio(&self) -> Result<(), String> {
+        if !self.audio.is_file() {
+            return Err("SoundVolumeViewが見つかりません。配布ZIPを展開し直してください。".into());
+        }
+        Ok(())
+    }
+
+    fn require_bluetooth(&self) -> Result<(), String> {
+        if !self.bluetooth.is_file() {
+            return Err("ToothTrayCLIが見つかりません。配布ZIPを展開し直してください。".into());
         }
         Ok(())
     }
@@ -81,7 +97,7 @@ struct SwitchMutex(HANDLE);
 
 impl SwitchMutex {
     fn acquire() -> Result<Option<Self>, String> {
-        let name = wide(OsStr::new("Local\\EarbudsPC.Switch"));
+        let name = wide(OsStr::new("Local\\AudioShortcutSwitch.Switch"));
         // SAFETY: The pointer is a valid zero-terminated UTF-16 string for this call.
         let handle = unsafe { CreateMutexW(std::ptr::null(), 0, name.as_ptr()) };
         if handle.is_null() {
@@ -118,7 +134,7 @@ fn wide(value: &OsStr) -> Vec<u16> {
 }
 
 fn error_dialog(message: &str) {
-    let title = wide(OsStr::new("イヤホンをPCで使う"));
+    let title = wide(OsStr::new("Audio Shortcut Switch"));
     let text = wide(OsStr::new(message));
     // SAFETY: The two strings are zero-terminated and valid for this synchronous call.
     unsafe {
@@ -202,7 +218,11 @@ fn audio_command(tools: &ToolPaths, arguments: &[OsString]) -> Result<(), String
     run_command(command, Duration::from_secs(8)).map(|_| ())
 }
 
-fn audio_state(tools: &ToolPaths, config: &Config) -> Result<AudioState, String> {
+fn audio_state(
+    tools: &ToolPaths,
+    endpoint_id: &str,
+    expected_device_name: Option<&str>,
+) -> Result<AudioState, String> {
     let path = tools
         .base
         .join("logs")
@@ -220,11 +240,7 @@ fn audio_state(tools: &ToolPaths, config: &Config) -> Result<AudioState, String>
     )?;
     let bytes =
         fs::read(&snapshot.0).map_err(|e| format!("音声機器の状態ファイルを読めません: {e}"))?;
-    core::parse_audio_state(
-        &bytes,
-        &config.render_endpoint_id,
-        &config.stereo_device_name,
-    )
+    core::parse_audio_state(&bytes, endpoint_id, expected_device_name)
 }
 
 fn set_default(tools: &ToolPaths, id: &str, role: &str) -> Result<(), String> {
@@ -240,31 +256,57 @@ fn set_default(tools: &ToolPaths, id: &str, role: &str) -> Result<(), String> {
 
 pub(crate) fn list_bluetooth() -> Result<Vec<BluetoothDevice>, String> {
     let tools = ToolPaths::locate()?;
-    tools.require_tools()?;
+    tools.require_bluetooth()?;
     let output = bluetooth_command(&tools, &["list"], Duration::from_secs(8))?;
     core::parse_bluetooth_list(&output)
 }
 
-pub(crate) fn register_device(id: &str, shortcut_name: &str) -> Result<(), String> {
-    let result = registration::register_device(id, shortcut_name);
+pub(crate) fn list_audio_endpoints() -> Result<Vec<AudioEndpoint>, String> {
+    registration::list_audio_endpoints()
+}
+
+pub(crate) fn list_choices() -> Result<ChoiceList, String> {
+    let audio = list_audio_endpoints()?;
+    let (bluetooth, bluetooth_error) = match list_bluetooth() {
+        Ok(devices) => (devices, None),
+        Err(error) => (Vec::new(), Some(error)),
+    };
+    let mut choices: Vec<_> = bluetooth.into_iter().map(DeviceChoice::Bluetooth).collect();
+    choices.extend(audio.into_iter().map(DeviceChoice::Audio));
+    Ok(ChoiceList {
+        choices,
+        bluetooth_error,
+    })
+}
+
+pub(crate) fn register_choice(choice: &DeviceChoice, shortcut_name: &str) -> Result<(), String> {
+    let result = match choice {
+        DeviceChoice::Bluetooth(device) => {
+            registration::register_bluetooth(&device.container_id, shortcut_name)
+        }
+        DeviceChoice::Audio(endpoint) => registration::register_audio(&endpoint.id, shortcut_name),
+    };
     if let Ok(tools) = ToolPaths::locate() {
         if let Ok(logger) = Logger::new(tools.log_path()) {
             match &result {
-                Ok(()) => logger.write(&format!("登録成功: {id} {shortcut_name}")),
-                Err(error) => logger.write(&format!("登録失敗: {id} {shortcut_name}: {error}")),
+                Ok(()) => logger.write(&format!("登録成功: {shortcut_name}")),
+                Err(error) => logger.write(&format!("登録失敗: {shortcut_name}: {error}")),
             }
         }
     }
     result
 }
 
-pub(crate) fn check_device(id: &str) -> Result<(), String> {
-    let result = registration::check_device(id);
+pub(crate) fn check_choice(choice: &DeviceChoice) -> Result<(), String> {
+    let result = match choice {
+        DeviceChoice::Bluetooth(device) => registration::check_device(&device.container_id),
+        DeviceChoice::Audio(endpoint) => registration::check_audio(&endpoint.id),
+    };
     if let Ok(tools) = ToolPaths::locate() {
         if let Ok(logger) = Logger::new(tools.log_path()) {
             match &result {
-                Ok(()) => logger.write(&format!("接続確認成功: {id}")),
-                Err(error) => logger.write(&format!("接続確認失敗: {id}: {error}")),
+                Ok(()) => logger.write("利用可能確認成功"),
+                Err(error) => logger.write(&format!("利用可能確認失敗: {error}")),
             }
         }
     }
@@ -276,63 +318,88 @@ fn switch(config_path: &Path, tools: &ToolPaths, log: &Logger) -> Result<(), Str
         log.write("重複起動を無視しました。");
         return Ok(());
     };
-    tools.require_tools()?;
+    tools.require_audio()?;
     let config = Config::read(config_path)?;
-    log.write(&format!(
-        "開始: {} ({})",
-        config.display_name, config.bluetooth_container_id
-    ));
-    let devices = list_bluetooth()?;
-    core::verify_registered_device(&devices, &config.bluetooth_container_id)?;
-
-    let mut connected = bluetooth_connected(tools, &config.bluetooth_container_id)?;
-    let mut audio = audio_state(tools, &config)?;
-    log.write(&format!(
-        "初期状態: connected={} available={} console={} multimedia={}",
-        connected, audio.available, audio.console_default, audio.multimedia_default
-    ));
-    if !connected {
-        log.write("Bluetooth接続を要求します。");
-        bluetooth_command(
-            tools,
-            &["connect-by-container-id", &config.bluetooth_container_id],
-            Duration::from_secs(15),
-        )?;
-    }
-
-    let deadline = Instant::now() + Duration::from_secs(35);
-    while !(connected && audio.available) {
-        if Instant::now() >= deadline {
-            return Err("35秒以内にイヤホンのStereo出力を確認できませんでした。".into());
+    let endpoint_id = config.target.endpoint_id();
+    let expected_name = match &config.target {
+        Target::Bluetooth {
+            stereo_device_name, ..
+        } => Some(stereo_device_name.as_str()),
+        Target::Audio { .. } => None,
+    };
+    log.write(&format!("開始: {} ({endpoint_id})", config.display_name));
+    let mut audio = audio_state(tools, endpoint_id, expected_name)?;
+    match &config.target {
+        Target::Bluetooth {
+            bluetooth_container_id,
+            stereo_device_name,
+            ..
+        } => {
+            tools.require_bluetooth()?;
+            core::verify_registered_device(&list_bluetooth()?, bluetooth_container_id)?;
+            let mut connected = bluetooth_connected(tools, bluetooth_container_id)?;
+            log.write(&format!(
+                "初期状態: connected={} available={} console={} multimedia={}",
+                connected, audio.available, audio.console_default, audio.multimedia_default
+            ));
+            if !connected {
+                log.write("Bluetooth接続を要求します。");
+                bluetooth_command(
+                    tools,
+                    &["connect-by-container-id", bluetooth_container_id],
+                    Duration::from_secs(15),
+                )?;
+            }
+            let deadline = Instant::now() + Duration::from_secs(35);
+            while !(connected && audio.available) {
+                if Instant::now() >= deadline {
+                    return Err("35秒以内にBluetoothのStereo出力を確認できませんでした。".into());
+                }
+                thread::sleep(Duration::from_millis(700));
+                connected = bluetooth_connected(tools, bluetooth_container_id)?;
+                audio = audio_state(tools, endpoint_id, expected_name)?;
+            }
+            if registration::stereo_driver_name(bluetooth_container_id)? != *stereo_device_name {
+                return Err("Bluetooth機器とStereo出力の対応が設定と異なります。".into());
+            }
         }
-        thread::sleep(Duration::from_millis(700));
-        connected = bluetooth_connected(tools, &config.bluetooth_container_id)?;
-        audio = audio_state(tools, &config)?;
-    }
-    if registration::stereo_driver_name(&config.bluetooth_container_id)?
-        != config.stereo_device_name
-    {
-        return Err("Bluetooth機器とStereo出力の対応が設定と異なります。".into());
+        Target::Audio { .. } => {
+            log.write(&format!(
+                "初期状態: available={} console={} multimedia={}",
+                audio.available, audio.console_default, audio.multimedia_default
+            ));
+            if !audio.available {
+                return Err(
+                    "指定した再生機器を使用できません。接続と有効状態を確認してください。".into(),
+                );
+            }
+        }
     }
     if !audio.console_default {
         log.write("Consoleの既定出力を設定します。");
-        set_default(tools, &config.render_endpoint_id, "0")?;
+        set_default(tools, endpoint_id, "0")?;
     }
     if !audio.multimedia_default {
         log.write("Multimediaの既定出力を設定します。");
-        set_default(tools, &config.render_endpoint_id, "1")?;
+        set_default(tools, endpoint_id, "1")?;
     }
 
     let verify_deadline = Instant::now() + Duration::from_secs(8);
     loop {
-        connected = bluetooth_connected(tools, &config.bluetooth_container_id)?;
-        audio = audio_state(tools, &config)?;
+        let connected = match &config.target {
+            Target::Bluetooth {
+                bluetooth_container_id,
+                ..
+            } => bluetooth_connected(tools, bluetooth_container_id)?,
+            Target::Audio { .. } => true,
+        };
+        audio = audio_state(tools, endpoint_id, expected_name)?;
         if connected && audio.available && audio.console_default && audio.multimedia_default {
-            log.write("成功: Bluetooth接続、Stereo出力、Console/Multimedia既定を確認しました。");
+            log.write("成功: 再生出力とConsole/Multimedia既定を確認しました。");
             return Ok(());
         }
         if Instant::now() >= verify_deadline {
-            return Err("最終状態で接続と既定出力を確認できませんでした。".into());
+            return Err("最終状態で再生出力と既定設定を確認できませんでした。".into());
         }
         thread::sleep(Duration::from_millis(350));
     }
@@ -347,17 +414,8 @@ pub fn entry() {
         }
         return;
     }
-    if args.len() == 4 && args[0] == "--register" && args[3] == "--no-dialog" {
-        let id = args[1].to_string_lossy();
-        let name = args[2].to_string_lossy();
-        let result = register_device(&id, &name);
-        if result.is_err() {
-            std::process::exit(1);
-        }
-        return;
-    }
     let no_dialog = args.len() == 3 && args[2] == "--no-dialog";
-    if (args.len() == 2 || no_dialog) && args[0] == "--connect" {
+    if (args.len() == 2 || no_dialog) && args[0] == "--switch" {
         let config_path = PathBuf::from(&args[1]);
         let tools = match ToolPaths::locate() {
             Ok(tools) => tools,
@@ -382,7 +440,7 @@ pub fn entry() {
             logger.write(&format!("ERROR: {error}"));
             if !no_dialog {
                 error_dialog(&format!(
-                    "イヤホンへの切り替えに失敗しました。\n{error}\nログ: {}",
+                    "再生出力の切り替えに失敗しました。\n{error}\nログ: {}",
                     log_path.display()
                 ));
             }

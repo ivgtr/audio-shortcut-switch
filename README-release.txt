@@ -1,26 +1,26 @@
-Earbuds PC Switch 0.2.0 (Windows 10/11 x64)
+Audio Shortcut Switch 0.3.0 (Windows 10/11 x64)
 
 使い方
-1. この ZIP を展開し、EarbudsPC フォルダーを %LOCALAPPDATA% など
+1. この ZIP を展開し、AudioShortcutSwitch フォルダーを %LOCALAPPDATA% など
    書き込み可能な場所に置きます。
-   例: C:\Users\<ユーザー名>\AppData\Local\EarbudsPC\EarbudsPC.exe
-2. Bluetooth イヤホンを Windows でペアリングします。
-3. EarbudsPC.exe を開き、機器とショートカット名を選んで「作成」を押します。
-   作成時にイヤホンへ接続しません。
-4. 接続を事前に試す場合は、イヤホンの電源を入れて「接続確認」を押します。
-   Bluetooth接続とStereo出力を確認します。既定出力は変更しません。
-5. デスクトップに作られたショートカットをクリックすると、その機器へ接続し、
-   Stereo 再生出力を Console と Multimedia の既定に設定します。
+   例: C:\Users\<ユーザー名>\AppData\Local\AudioShortcutSwitch\AudioShortcutSwitch.exe
+2. AudioShortcutSwitch.exe を開き、出力先とショートカット名を選んで「作成」を押します。
+   Bluetooth 機器は先に Windows でペアリングします。作成時は切り替えません。
+3. デスクトップのショートカットをクリックします。通常の出力機器はそのまま、
+   Bluetooth 機器は接続と Stereo 出力の確認後に、Console と Multimedia の既定出力に設定します。
 
-Windows が Stereo 出力 ID をまだ保持していない場合は、
-一度「接続確認」を実行してからショートカットを作成してください。
+Bluetooth 機器の Stereo 出力 ID を Windows がまだ保持していない場合は、
+イヤホンの電源を入れ、「接続確認」を実行してから作成してください。
+通常の出力機器では「利用可能か確認」で使用可能な状態を確認できます。
+確認ボタンは既定出力を変更しません。
 同じ名前のショートカットが既にある場合は、別の名前を入力してください。
-別の機器用のショートカットも同じ設定画面で作成できます。
 アプリのフォルダーを移動した場合は、ショートカットを作り直してください。
+旧版 Earbuds PC Switch の設定は読み込みません。旧版のショートカットを残す場合は、
+旧版の EarbudsPC フォルダーも残してください。
 
 成功時は画面を出しません。失敗時はエラーを表示し、
 logs\switch.log に結果を残します。configs\*.json には機器固有の ID を保存します。
-機器の設定を解除するには、その機器のショートカットと対応する設定ファイルを削除します。
+出力先の設定を解除するには、そのショートカットと対応する設定ファイルを削除します。
 
 この配布物には、次の補助ツールを同梱しています。
 - ToothTrayCLI 0.2-cli-20260701 (BSD-2-Clause)

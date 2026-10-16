@@ -1,5 +1,4 @@
-use crate::core::BluetoothDevice;
-use crate::win;
+use crate::win::{self, ChoiceList, DeviceChoice};
 use native_windows_gui as nwg;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -7,7 +6,7 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 
 enum WorkerMessage {
-    Devices(Result<Vec<BluetoothDevice>, String>),
+    Devices(Result<ChoiceList, String>),
     Registered(Result<(), String>),
     Checked(Result<(), String>),
 }
@@ -23,7 +22,7 @@ struct Ui {
     check_button: nwg::Button,
     status_label: nwg::Label,
     notice: nwg::Notice,
-    devices: RefCell<Vec<BluetoothDevice>>,
+    devices: RefCell<Vec<DeviceChoice>>,
     busy: Cell<bool>,
     sender: Sender<WorkerMessage>,
     receiver: Receiver<WorkerMessage>,
@@ -52,29 +51,29 @@ impl Ui {
             receiver,
         };
         nwg::Window::builder()
-            .title("Earbuds PC Switch - 設定")
-            .size((520, 290))
+            .title("Audio Shortcut Switch - 設定")
+            .size((620, 290))
             .position((360, 240))
             .flags(nwg::WindowFlags::WINDOW | nwg::WindowFlags::VISIBLE)
             .build(&mut ui.window)
             .map_err(|e| e.to_string())?;
         nwg::Label::builder()
-            .text("登録済みBluetooth機器")
+            .text("切り替える再生出力")
             .position((20, 18))
-            .size((470, 24))
+            .size((570, 24))
             .parent(&ui.window)
             .build(&mut ui.device_label)
             .map_err(|e| e.to_string())?;
         nwg::ComboBox::builder()
             .collection(Vec::<String>::new())
             .position((20, 46))
-            .size((375, 180))
+            .size((475, 180))
             .parent(&ui.window)
             .build(&mut ui.devices_box)
             .map_err(|e| e.to_string())?;
         nwg::Button::builder()
             .text("再検出")
-            .position((405, 46))
+            .position((505, 46))
             .size((90, 28))
             .parent(&ui.window)
             .build(&mut ui.refresh_button)
@@ -82,26 +81,26 @@ impl Ui {
         nwg::Label::builder()
             .text("デスクトップのショートカット名")
             .position((20, 92))
-            .size((470, 24))
+            .size((570, 24))
             .parent(&ui.window)
             .build(&mut ui.shortcut_label)
             .map_err(|e| e.to_string())?;
         nwg::TextInput::builder()
             .position((20, 120))
-            .size((475, 28))
+            .size((575, 28))
             .parent(&ui.window)
             .build(&mut ui.shortcut_input)
             .map_err(|e| e.to_string())?;
         nwg::Button::builder()
-            .text("接続確認")
+            .text("利用可能か確認")
             .position((20, 162))
-            .size((110, 28))
+            .size((130, 28))
             .parent(&ui.window)
             .build(&mut ui.check_button)
             .map_err(|e| e.to_string())?;
         nwg::Button::builder()
             .text("作成")
-            .position((405, 162))
+            .position((505, 162))
             .size((90, 28))
             .parent(&ui.window)
             .build(&mut ui.create_button)
@@ -109,7 +108,7 @@ impl Ui {
         nwg::Label::builder()
             .text("機器を検出しています。")
             .position((20, 205))
-            .size((475, 56))
+            .size((575, 56))
             .parent(&ui.window)
             .build(&mut ui.status_label)
             .map_err(|e| e.to_string())?;
@@ -136,25 +135,35 @@ impl Ui {
         if self.busy.get() {
             return;
         }
-        self.set_busy(true, "登録済みBluetooth機器を調べています。");
+        self.set_busy(true, "再生出力を調べています。");
         let sender = self.sender.clone();
         let notice = self.notice.sender();
         thread::spawn(move || {
-            let result = win::list_bluetooth();
+            let result = win::list_choices();
             let _ = sender.send(WorkerMessage::Devices(result));
             notice.notice();
         });
     }
 
-    fn selected(&self) -> Option<BluetoothDevice> {
+    fn selected(&self) -> Option<DeviceChoice> {
         let index = self.devices_box.selection()?;
         self.devices.borrow().get(index).cloned()
     }
 
     fn update_shortcut_name(&self) {
-        if let Some(device) = self.selected() {
-            self.shortcut_input
-                .set_text(&format!("{} をPCで使う", device.name));
+        if let Some(choice) = self.selected() {
+            match choice {
+                DeviceChoice::Bluetooth(device) => {
+                    self.shortcut_input
+                        .set_text(&format!("{} をPCで使う", device.name));
+                    self.check_button.set_text("接続確認");
+                }
+                DeviceChoice::Audio(endpoint) => {
+                    self.shortcut_input
+                        .set_text(&format!("{} に切り替え", endpoint.name));
+                    self.check_button.set_text("利用可能か確認");
+                }
+            }
         }
     }
 
@@ -162,12 +171,8 @@ impl Ui {
         if self.busy.get() {
             return;
         }
-        let Some(device) = self.selected() else {
-            nwg::modal_error_message(
-                &self.window,
-                "機器を選択",
-                "Bluetooth機器を選択してください。",
-            );
+        let Some(choice) = self.selected() else {
+            nwg::modal_error_message(&self.window, "機器を選択", "再生出力を選択してください。");
             return;
         };
         let name = self.shortcut_input.text();
@@ -183,7 +188,7 @@ impl Ui {
         let sender = self.sender.clone();
         let notice = self.notice.sender();
         thread::spawn(move || {
-            let result = win::register_device(&device.container_id, &name);
+            let result = win::register_choice(&choice, &name);
             let _ = sender.send(WorkerMessage::Registered(result));
             notice.notice();
         });
@@ -193,19 +198,15 @@ impl Ui {
         if self.busy.get() {
             return;
         }
-        let Some(device) = self.selected() else {
-            nwg::modal_error_message(
-                &self.window,
-                "機器を選択",
-                "Bluetooth機器を選択してください。",
-            );
+        let Some(choice) = self.selected() else {
+            nwg::modal_error_message(&self.window, "機器を選択", "再生出力を選択してください。");
             return;
         };
-        self.set_busy(true, "Bluetooth接続とStereo出力を確認しています。");
+        self.set_busy(true, "選択した再生出力を確認しています。");
         let sender = self.sender.clone();
         let notice = self.notice.sender();
         thread::spawn(move || {
-            let result = win::check_device(&device.container_id);
+            let result = win::check_choice(&choice);
             let _ = sender.send(WorkerMessage::Checked(result));
             notice.notice();
         });
@@ -214,14 +215,25 @@ impl Ui {
     fn receive(&self) {
         while let Ok(message) = self.receiver.try_recv() {
             match message {
-                WorkerMessage::Devices(Ok(devices)) => {
+                WorkerMessage::Devices(Ok(list)) => {
+                    let devices = list.choices;
                     let labels = devices
                         .iter()
-                        .map(|device| {
-                            if device.connected {
-                                format!("{} (接続中)", device.name)
-                            } else {
-                                device.name.clone()
+                        .map(|choice| match choice {
+                            DeviceChoice::Bluetooth(device) if device.connected => {
+                                format!("[Bluetooth・接続中] {}", device.name)
+                            }
+                            DeviceChoice::Bluetooth(device) => {
+                                format!("[Bluetooth] {}", device.name)
+                            }
+                            DeviceChoice::Audio(endpoint) if endpoint.active => {
+                                format!("[出力のみ] {} ({})", endpoint.name, endpoint.device_name)
+                            }
+                            DeviceChoice::Audio(endpoint) => {
+                                format!(
+                                    "[出力のみ・現在利用不可] {} ({})",
+                                    endpoint.name, endpoint.device_name
+                                )
                             }
                         })
                         .collect();
@@ -234,8 +246,15 @@ impl Ui {
                     let count = self.devices.borrow().len();
                     self.set_busy(
                         false,
-                        &format!("{count}件の登録済み機器を検出しました。作成時は接続しません。"),
+                        &format!("{count}件の出力先を検出しました。作成時は切り替えません。"),
                     );
+                    if let Some(error) = list.bluetooth_error {
+                        nwg::modal_error_message(
+                            &self.window,
+                            "Bluetooth機器を取得できません",
+                            &format!("通常の再生出力は利用できます。\n{error}"),
+                        );
+                    }
                 }
                 WorkerMessage::Devices(Err(error)) => {
                     self.devices_box.set_collection(Vec::new());
@@ -248,7 +267,7 @@ impl Ui {
                     nwg::modal_info_message(
                         &self.window,
                         "作成完了",
-                        "デスクトップにショートカットを作成しました。接続は未確認です。必要なら「接続確認」を押してください。",
+                        "デスクトップにショートカットを作成しました。必要なら確認ボタンで出力先を確認してください。",
                     );
                 }
                 WorkerMessage::Registered(Err(error)) => {
@@ -256,15 +275,15 @@ impl Ui {
                     nwg::modal_error_message(&self.window, "作成失敗", &error);
                 }
                 WorkerMessage::Checked(Ok(())) => {
-                    self.set_busy(false, "Bluetooth接続とStereo出力を確認しました。");
+                    self.set_busy(false, "再生出力を確認しました。");
                     nwg::modal_info_message(
                         &self.window,
                         "確認完了",
-                        "Bluetooth接続とStereo出力を確認しました。既定出力は変更していません。",
+                        "再生出力を確認しました。既定出力は変更していません。",
                     );
                 }
                 WorkerMessage::Checked(Err(error)) => {
-                    self.set_busy(false, "接続を確認できませんでした。");
+                    self.set_busy(false, "再生出力を確認できませんでした。");
                     nwg::modal_error_message(&self.window, "確認失敗", &error);
                 }
             }

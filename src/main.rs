@@ -11,5 +11,5 @@ fn main() {
     win::entry();
 
     #[cfg(not(windows))]
-    eprintln!("Earbuds PC Switch runs on Windows.");
+    eprintln!("Audio Shortcut Switch runs on Windows.");
 }

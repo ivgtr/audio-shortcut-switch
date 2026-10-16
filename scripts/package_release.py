@@ -34,7 +34,7 @@ def verified_bytes(path: Path, expected_sha256: str) -> bytes:
 
 
 def add_file(archive: zipfile.ZipFile, destination: str, data: bytes) -> None:
-    info = zipfile.ZipInfo(f"EarbudsPC/{destination}", date_time=(2026, 10, 17, 0, 0, 0))
+    info = zipfile.ZipInfo(f"AudioShortcutSwitch/{destination}", date_time=(2026, 10, 17, 0, 0, 0))
     info.compress_type = zipfile.ZIP_DEFLATED
     info.external_attr = 0o644 << 16
     archive.writestr(info, data)
@@ -54,7 +54,7 @@ def package(exe: Path, toothtray_zip: Path, soundvolumeview_zip: Path, output: P
     root = Path(__file__).resolve().parent.parent
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, "w") as archive:
-        add_file(archive, "EarbudsPC.exe", executable)
+        add_file(archive, "AudioShortcutSwitch.exe", executable)
         add_file(archive, "README.txt", (root / "README-release.txt").read_bytes())
         add_file(archive, "tools/ToothTrayCLI.exe", bluetooth)
         add_file(archive, "tools/ToothTrayCLI-LICENSE.md", (root / "third_party/ToothTrayCLI-LICENSE.md").read_bytes())

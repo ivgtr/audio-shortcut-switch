@@ -1,5 +1,5 @@
 use super::{SwitchMutex, ToolPaths, audio_command, bluetooth_command, bluetooth_connected, wide};
-use crate::core::{self, Config};
+use crate::core::{self, AudioEndpoint, Config, Target};
 use std::ffi::{OsStr, OsString, c_void};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
@@ -171,6 +171,7 @@ fn stereo_driver_name_any_state(container_id: &str) -> Result<String, String> {
 }
 
 fn sound_items(tools: &ToolPaths) -> Result<Vec<u8>, String> {
+    tools.require_audio()?;
     fs::create_dir_all(tools.base.join("logs"))
         .map_err(|e| format!("音声機器一覧の保存先を作れません: {e}"))?;
     let path = tools
@@ -198,9 +199,15 @@ fn sound_items(tools: &ToolPaths) -> Result<Vec<u8>, String> {
     result
 }
 
+pub(super) fn list_audio_endpoints() -> Result<Vec<AudioEndpoint>, String> {
+    let tools = ToolPaths::locate()?;
+    core::parse_audio_endpoints(&sound_items(&tools)?)
+}
+
 pub(super) fn check_device(id: &str) -> Result<(), String> {
     let tools = ToolPaths::locate()?;
-    tools.require_tools()?;
+    tools.require_bluetooth()?;
+    tools.require_audio()?;
     let devices = super::list_bluetooth()?;
     core::verify_registered_device(&devices, id)?;
     let Some(_lock) = SwitchMutex::acquire()? else {
@@ -226,6 +233,19 @@ pub(super) fn check_device(id: &str) -> Result<(), String> {
         }
         thread::sleep(Duration::from_millis(700));
     }
+}
+
+pub(super) fn check_audio(id: &str) -> Result<(), String> {
+    let tools = ToolPaths::locate()?;
+    let endpoints = core::parse_audio_endpoints(&sound_items(&tools)?)?;
+    let endpoint = endpoints
+        .iter()
+        .find(|endpoint| endpoint.id.eq_ignore_ascii_case(id))
+        .ok_or("指定した再生機器が見つかりません。")?;
+    if !endpoint.active {
+        return Err("指定した再生機器を使用できません。接続と有効状態を確認してください。".into());
+    }
+    Ok(())
 }
 
 fn desktop_path() -> Result<PathBuf, String> {
@@ -281,7 +301,7 @@ fn create_shortcut(
         };
         check_hresult(created, "作成")?;
         let result = (|| {
-            let arguments = format!("--connect \"{}\"", config_path.display());
+            let arguments = format!("--switch \"{}\"", config_path.display());
             unsafe {
                 check_hresult(
                     (*link).SetPath(wide(exe_path.as_os_str()).as_ptr()),
@@ -296,12 +316,8 @@ fn create_shortcut(
                     "作業フォルダーの設定",
                 )?;
                 check_hresult(
-                    (*link).SetDescription(
-                        wide(OsStr::new(
-                            "登録済みBluetooth機器へ接続し、Stereo再生出力へ切り替える",
-                        ))
-                        .as_ptr(),
-                    ),
+                    (*link)
+                        .SetDescription(wide(OsStr::new("指定した再生出力へ切り替える")).as_ptr()),
                     "説明の設定",
                 )?;
             }
@@ -324,16 +340,13 @@ fn create_shortcut(
     result
 }
 
-pub(super) fn register_device(id: &str, shortcut_name: &str) -> Result<(), String> {
-    let tools = ToolPaths::locate()?;
-    tools.require_tools()?;
-    let devices = super::list_bluetooth()?;
-    core::verify_registered_device(&devices, id)?;
-    let device_name = devices
-        .into_iter()
-        .find(|device| device.container_id.eq_ignore_ascii_case(id))
-        .unwrap()
-        .name;
+fn save_shortcut(
+    tools: &ToolPaths,
+    config: Config,
+    config_name: &str,
+    shortcut_name: &str,
+) -> Result<(), String> {
+    config.validate()?;
     if shortcut_name.is_empty()
         || shortcut_name.chars().count() > 100
         || shortcut_name.ends_with([' ', '.'])
@@ -348,32 +361,20 @@ pub(super) fn register_device(id: &str, shortcut_name: &str) -> Result<(), Strin
     if link_path.exists() {
         return Err("同じ名前のショートカットが既にあります。".into());
     }
+    let exe_path = tools.base.join("AudioShortcutSwitch.exe");
+    if !exe_path.is_file() {
+        return Err("実行ファイルが見つかりません。配布ZIPを展開し直してください。".into());
+    }
     let configs = tools.base.join("configs");
     fs::create_dir_all(&configs).map_err(|e| format!("設定フォルダーを作れません: {e}"))?;
-    let config_path = configs.join(format!(
-        "{}.json",
-        id.trim_matches(['{', '}']).to_ascii_lowercase()
-    ));
+    let config_path = configs.join(format!("{config_name}.json"));
     let mut created = false;
     if config_path.exists() {
-        let config = Config::read(&config_path)?;
-        if !config.bluetooth_container_id.eq_ignore_ascii_case(id)
-            || config.display_name != device_name
-        {
-            return Err("既存設定とBluetooth機器が一致しません。".into());
+        let saved = Config::read(&config_path)?;
+        if saved.target != config.target {
+            return Err("既存設定と選択した出力先が一致しません。".into());
         }
     } else {
-        let stereo_name = stereo_driver_name_any_state(id)?;
-        let endpoint_id = core::find_endpoint(&sound_items(&tools)?, &stereo_name)?
-            .ok_or("Stereo出力IDを取得できません。初回接続後に再試行してください。")?;
-        let config = Config {
-            schema_version: 1,
-            display_name: device_name,
-            bluetooth_container_id: id.to_owned(),
-            render_endpoint_id: endpoint_id,
-            stereo_device_name: stereo_name,
-        };
-        config.validate()?;
         let json =
             serde_json::to_vec_pretty(&config).map_err(|e| format!("設定を作れません: {e}"))?;
         let mut file = OpenOptions::new()
@@ -388,10 +389,65 @@ pub(super) fn register_device(id: &str, shortcut_name: &str) -> Result<(), Strin
         }
         created = true;
     }
-    let exe_path = tools.base.join("EarbudsPC.exe");
     let result = create_shortcut(&link_path, &exe_path, &config_path, &tools.base);
     if result.is_err() && created {
         let _ = fs::remove_file(&config_path);
     }
     result
+}
+
+pub(super) fn register_bluetooth(id: &str, shortcut_name: &str) -> Result<(), String> {
+    let tools = ToolPaths::locate()?;
+    tools.require_bluetooth()?;
+    tools.require_audio()?;
+    let devices = super::list_bluetooth()?;
+    core::verify_registered_device(&devices, id)?;
+    let device_name = devices
+        .into_iter()
+        .find(|device| device.container_id.eq_ignore_ascii_case(id))
+        .unwrap()
+        .name;
+    let stereo_name = stereo_driver_name_any_state(id)?;
+    let endpoint_id = core::find_endpoint(&sound_items(&tools)?, &stereo_name)?
+        .ok_or("Stereo出力IDを取得できません。初回接続後に再試行してください。")?;
+    let config = Config {
+        schema_version: core::SCHEMA_VERSION,
+        display_name: device_name,
+        target: Target::Bluetooth {
+            bluetooth_container_id: id.to_owned(),
+            render_endpoint_id: endpoint_id,
+            stereo_device_name: stereo_name,
+        },
+    };
+    let config_name = format!(
+        "bluetooth-{}",
+        id.trim_matches(['{', '}']).to_ascii_lowercase()
+    );
+    save_shortcut(&tools, config, &config_name, shortcut_name)
+}
+
+pub(super) fn register_audio(id: &str, shortcut_name: &str) -> Result<(), String> {
+    let tools = ToolPaths::locate()?;
+    let endpoints = core::parse_audio_endpoints(&sound_items(&tools)?)?;
+    let endpoint = endpoints
+        .into_iter()
+        .find(|endpoint| endpoint.id.eq_ignore_ascii_case(id))
+        .ok_or("指定した再生機器が見つかりません。")?;
+    let config = Config {
+        schema_version: core::SCHEMA_VERSION,
+        display_name: format!("{} ({})", endpoint.name, endpoint.device_name),
+        target: Target::Audio {
+            render_endpoint_id: endpoint.id.clone(),
+        },
+    };
+    let guid = endpoint
+        .id
+        .rsplit_once('.')
+        .ok_or("再生機器IDが不正です。")?
+        .1;
+    let config_name = format!(
+        "audio-{}",
+        guid.trim_matches(['{', '}']).to_ascii_lowercase()
+    );
+    save_shortcut(&tools, config, &config_name, shortcut_name)
 }

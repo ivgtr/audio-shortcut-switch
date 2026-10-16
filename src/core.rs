@@ -2,46 +2,100 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+pub const SCHEMA_VERSION: u32 = 2;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Config {
     pub schema_version: u32,
     pub display_name: String,
-    pub bluetooth_container_id: String,
-    pub render_endpoint_id: String,
-    pub stereo_device_name: String,
+    pub target: Target,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", deny_unknown_fields)]
+pub enum Target {
+    #[serde(rename = "bluetooth")]
+    Bluetooth {
+        #[serde(rename = "bluetoothContainerId")]
+        bluetooth_container_id: String,
+        #[serde(rename = "renderEndpointId")]
+        render_endpoint_id: String,
+        #[serde(rename = "stereoDeviceName")]
+        stereo_device_name: String,
+    },
+    #[serde(rename = "audio")]
+    Audio {
+        #[serde(rename = "renderEndpointId")]
+        render_endpoint_id: String,
+    },
+}
+
+impl Target {
+    pub fn endpoint_id(&self) -> &str {
+        match self {
+            Self::Bluetooth {
+                render_endpoint_id, ..
+            }
+            | Self::Audio { render_endpoint_id } => render_endpoint_id,
+        }
+    }
 }
 
 impl Config {
     pub fn read(path: &Path) -> Result<Self, String> {
         let bytes = fs::read(path).map_err(|e| format!("設定ファイルを読めません: {e}"))?;
         let bytes = bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(&bytes);
-        let config: Self = serde_json::from_slice(bytes)
+        let value: serde_json::Value = serde_json::from_slice(bytes)
+            .map_err(|e| format!("設定ファイルの形式が正しくありません: {e}"))?;
+        if value
+            .get("schemaVersion")
+            .and_then(serde_json::Value::as_u64)
+            == Some(1)
+        {
+            return Err(
+                "旧版の設定ファイルです。新しいアプリでショートカットを作り直してください。".into(),
+            );
+        }
+        let config: Self = serde_json::from_value(value)
             .map_err(|e| format!("設定ファイルの形式が正しくありません: {e}"))?;
         config.validate()?;
         Ok(config)
     }
 
     pub fn validate(&self) -> Result<(), String> {
-        if self.schema_version != 1 {
+        if self.schema_version != SCHEMA_VERSION {
             return Err("未対応の設定ファイル版です。".into());
-        }
-        if !valid_guid(&self.bluetooth_container_id) {
-            return Err("Bluetooth Container IDが不正です。".into());
-        }
-        if !valid_endpoint_id(&self.render_endpoint_id) {
-            return Err("Stereo再生エンドポイントIDが不正です。".into());
         }
         if self.display_name.trim().is_empty() || self.display_name.contains(['\r', '\n']) {
             return Err("機器名が不正です。".into());
         }
-        if self.stereo_device_name.trim().is_empty()
-            || self.stereo_device_name.contains(['\r', '\n'])
+        if !valid_endpoint_id(self.target.endpoint_id()) {
+            return Err("再生エンドポイントIDが不正です。".into());
+        }
+        if let Target::Bluetooth {
+            bluetooth_container_id,
+            stereo_device_name,
+            ..
+        } = &self.target
         {
-            return Err("Stereoデバイス名が不正です。".into());
+            if !valid_guid(bluetooth_container_id) {
+                return Err("Bluetooth Container IDが不正です。".into());
+            }
+            if stereo_device_name.trim().is_empty() || stereo_device_name.contains(['\r', '\n']) {
+                return Err("Stereoデバイス名が不正です。".into());
+            }
         }
         Ok(())
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct AudioEndpoint {
+    pub id: String,
+    pub name: String,
+    pub device_name: String,
+    pub active: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -92,19 +146,64 @@ pub struct AudioState {
     pub multimedia_default: bool,
 }
 
-pub fn parse_audio_state(
-    json: &[u8],
-    endpoint_id: &str,
-    stereo_name: &str,
-) -> Result<AudioState, String> {
+fn audio_items(json: &[u8]) -> Result<Vec<serde_json::Value>, String> {
     let bytes = json.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(json);
     let items: serde_json::Value =
         serde_json::from_slice(bytes).map_err(|e| format!("音声機器一覧のJSONが不正です: {e}"))?;
-    let items = items
+    items
         .as_array()
-        .ok_or("音声機器一覧が配列ではありません。")?;
+        .cloned()
+        .ok_or("音声機器一覧が配列ではありません。".into())
+}
+
+fn endpoint_state(value: &str) -> Result<bool, String> {
+    match value {
+        "Active" => Ok(true),
+        "Disabled" | "Not Present" | "Unplugged" => Ok(false),
+        _ => Err(format!("未対応の再生機器状態です: {value}")),
+    }
+}
+
+pub fn parse_audio_endpoints(json: &[u8]) -> Result<Vec<AudioEndpoint>, String> {
+    let mut endpoints = Vec::new();
+    let mut ids = std::collections::HashSet::new();
+    for item in audio_items(json)? {
+        let field = |name| item.get(name).and_then(serde_json::Value::as_str);
+        if field("Type") != Some("Device") || field("Direction") != Some("Render") {
+            continue;
+        }
+        let required =
+            |name| field(name).ok_or_else(|| format!("音声機器一覧に{name}がありません。"));
+        let id = required("Item ID")?;
+        let name = required("Name")?;
+        let device_name = required("Device Name")?;
+        let state = required("Device State")?;
+        if !valid_endpoint_id(id) || name.trim().is_empty() || device_name.trim().is_empty() {
+            return Err("再生機器のIDまたは名前が不正です。".into());
+        }
+        let active = endpoint_state(state)?;
+        if !ids.insert(id.to_ascii_lowercase()) {
+            return Err("同一の再生エンドポイントIDが複数あります。".into());
+        }
+        if state != "Disabled" {
+            endpoints.push(AudioEndpoint {
+                id: id.to_owned(),
+                name: name.to_owned(),
+                device_name: device_name.to_owned(),
+                active,
+            });
+        }
+    }
+    Ok(endpoints)
+}
+
+pub fn parse_audio_state(
+    json: &[u8],
+    endpoint_id: &str,
+    expected_device_name: Option<&str>,
+) -> Result<AudioState, String> {
     let mut match_item = None;
-    for item in items {
+    for item in audio_items(json)? {
         let get = |key| item.get(key).and_then(serde_json::Value::as_str);
         if get("Type") == Some("Device")
             && get("Direction") == Some("Render")
@@ -123,11 +222,11 @@ pub fn parse_audio_state(
             .and_then(serde_json::Value::as_str)
             .ok_or_else(|| format!("音声機器一覧に{key}がありません。"))
     };
-    if required("Device Name")? != stereo_name {
+    if expected_device_name.is_some_and(|name| required("Device Name").ok() != Some(name)) {
         return Err("Stereoデバイス名が設定と異なります。".into());
     }
     Ok(AudioState {
-        available: required("Device State")? == "Active",
+        available: endpoint_state(required("Device State")?)?,
         console_default: required("Default")? == "Render",
         multimedia_default: required("Default Multimedia")? == "Render",
     })
@@ -138,20 +237,18 @@ fn find_stereo_endpoint(
     stereo_name: &str,
     active_only: bool,
 ) -> Result<Option<String>, String> {
-    let bytes = json.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(json);
-    let items: serde_json::Value =
-        serde_json::from_slice(bytes).map_err(|e| format!("音声機器一覧のJSONが不正です: {e}"))?;
-    let items = items
-        .as_array()
-        .ok_or("音声機器一覧が配列ではありません。")?;
     let mut found = None;
-    for item in items {
+    for item in audio_items(json)? {
         let field = |name| item.get(name).and_then(serde_json::Value::as_str);
         if field("Type") == Some("Device")
             && field("Direction") == Some("Render")
             && field("Device Name") == Some(stereo_name)
-            && (!active_only || field("Device State") == Some("Active"))
         {
+            let active =
+                endpoint_state(field("Device State").ok_or("再生機器状態がありません。")?)?;
+            if active_only && !active {
+                continue;
+            }
             let id = field("Item ID").ok_or("Stereo出力のIDがありません。")?;
             if !valid_endpoint_id(id) {
                 return Err("Stereo出力のIDが不正です。".into());
@@ -202,11 +299,42 @@ mod tests {
     const ENDPOINT: &str = "{0.0.0.00000000}.{A77A09B2-1EC6-49C3-860A-68945904A2F1}";
 
     #[test]
-    fn strict_config_rejects_unknown_fields_and_invalid_ids() {
-        let data = format!(
-            r#"{{"schemaVersion":1,"displayName":"AirPods Pro","bluetoothContainerId":"{GUID}","renderEndpointId":"{ENDPOINT}","stereoDeviceName":"Headphones","extra":true}}"#
+    fn strict_config_distinguishes_bluetooth_and_audio() {
+        let audio = format!(
+            r#"{{"schemaVersion":2,"displayName":"Speakers","target":{{"kind":"audio","renderEndpointId":"{ENDPOINT}"}}}}"#
         );
-        assert!(serde_json::from_str::<Config>(&data).is_err());
+        let config: Config = serde_json::from_str(&audio).unwrap();
+        config.validate().unwrap();
+        assert!(matches!(config.target, Target::Audio { .. }));
+        let bluetooth = format!(
+            r#"{{"schemaVersion":2,"displayName":"AirPods Pro","target":{{"kind":"bluetooth","bluetoothContainerId":"{GUID}","renderEndpointId":"{ENDPOINT}","stereoDeviceName":"Headphones"}}}}"#
+        );
+        serde_json::from_str::<Config>(&bluetooth)
+            .unwrap()
+            .validate()
+            .unwrap();
+        assert!(
+            serde_json::from_str::<Config>(&audio.replace("\"audio\"", "\"unknown\"")).is_err()
+        );
+        assert!(serde_json::from_str::<Config>(&audio.replace("\"target\"", "\"extra\"")).is_err());
+        assert!(
+            serde_json::from_str::<Config>(&audio.replace("\"renderEndpointId\"", "\"extra\""))
+                .is_err()
+        );
+        assert!(
+            serde_json::from_str::<Config>(
+                &audio.replace("\"kind\":\"audio\"", "\"kind\":\"audio\",\"extra\":true")
+            )
+            .is_err()
+        );
+        assert!(
+            serde_json::from_str::<Config>(
+                &audio.replace("\"schemaVersion\":2", "\"schemaVersion\":1")
+            )
+            .unwrap()
+            .validate()
+            .is_err()
+        );
         assert!(!valid_guid("{not-a-guid}"));
         assert!(!valid_endpoint_id(GUID));
     }
@@ -216,7 +344,7 @@ mod tests {
         let data = format!(
             r#"[{{"Type":"Device","Direction":"Render","Item ID":"{ENDPOINT}","Device Name":"Headphones","Device State":"Active","Default":"Render","Default Multimedia":"Render"}}]"#
         );
-        let state = parse_audio_state(data.as_bytes(), ENDPOINT, "Headphones").unwrap();
+        let state = parse_audio_state(data.as_bytes(), ENDPOINT, Some("Headphones")).unwrap();
         assert_eq!(
             state,
             AudioState {
@@ -225,11 +353,30 @@ mod tests {
                 multimedia_default: true
             }
         );
-        assert!(parse_audio_state(data.as_bytes(), ENDPOINT, "Hands-Free").is_err());
+        assert!(parse_audio_state(data.as_bytes(), ENDPOINT, Some("Hands-Free")).is_err());
         assert_eq!(
-            parse_audio_state(data.as_bytes(), GUID, "Headphones").unwrap(),
+            parse_audio_state(data.as_bytes(), GUID, None).unwrap(),
             AudioState::default()
         );
+    }
+
+    #[test]
+    fn render_list_excludes_capture_and_disabled_and_rejects_duplicate_ids() {
+        let render = format!(
+            r#"{{"Type":"Device","Direction":"Render","Item ID":"{ENDPOINT}","Name":"Speakers","Device Name":"USB Audio","Device State":"Active"}}"#
+        );
+        let capture = render.replace("Render", "Capture");
+        let items = parse_audio_endpoints(format!("[{render},{capture}]").as_bytes()).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].name, "Speakers");
+        assert!(items[0].active);
+        let disabled = render.replace("Active", "Disabled");
+        assert!(
+            parse_audio_endpoints(format!("[{disabled}]").as_bytes())
+                .unwrap()
+                .is_empty()
+        );
+        assert!(parse_audio_endpoints(format!("[{render},{render}]").as_bytes()).is_err());
     }
 
     #[test]

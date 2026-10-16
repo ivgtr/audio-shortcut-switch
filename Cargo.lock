@@ -3,14 +3,8 @@
 version = 4
 
 [[package]]
-name = "bitflags"
-version = "1.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
-
-[[package]]
-name = "earbuds-pc"
-version = "0.2.0"
+name = "audio-shortcut-switch"
+version = "0.3.0"
 dependencies = [
  "native-windows-gui",
  "serde",
@@ -18,6 +12,12 @@ dependencies = [
  "winapi",
  "windows-sys",
 ]
+
+[[package]]
+name = "bitflags"
+version = "1.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "itoa"

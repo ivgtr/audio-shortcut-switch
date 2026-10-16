@@ -26,17 +26,17 @@ jobs:
         shell: pwsh
         run: |
           $metadata = cargo +1.99.1 metadata --no-deps --format-version 1 | ConvertFrom-Json
-          $package = @($metadata.packages | Where-Object { $_.name -eq 'earbuds-pc' })
+          $package = @($metadata.packages | Where-Object { $_.name -eq 'audio-shortcut-switch' })
           if ($package.Count -ne 1) { throw 'Could not determine the app version' }
           $version = $package[0].version
           if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") {
             throw "Tag $env:GITHUB_REF_NAME does not match Cargo version $version"
           }
-          if ((Get-Content README-release.txt -TotalCount 1) -ne "Earbuds PC Switch $version (Windows 10/11 x64)") {
+          if ((Get-Content README-release.txt -TotalCount 1) -ne "Audio Shortcut Switch $version (Windows 10/11 x64)") {
             throw 'Release README version does not match Cargo version'
           }
           "version=$version" >> $env:GITHUB_OUTPUT
-          "asset_name=EarbudsPC-$version-win-x64.zip" >> $env:GITHUB_OUTPUT
+          "asset_name=AudioShortcutSwitch-$version-win-x64.zip" >> $env:GITHUB_OUTPUT
       - name: Test
         shell: pwsh
         run: cargo +1.99.1 test --locked
@@ -55,7 +55,7 @@ jobs:
         shell: pwsh
         run: |
           python scripts/package_release.py `
-            --exe target/x86_64-pc-windows-msvc/release/earbuds-pc.exe `
+            --exe target/x86_64-pc-windows-msvc/release/audio-shortcut-switch.exe `
             --toothtray-zip "$env:RUNNER_TEMP\ToothTrayCLI.zip" `
             --soundvolumeview-zip "$env:RUNNER_TEMP\soundvolumeview-x64.zip" `
             --output "dist/${{ steps.version.outputs.asset_name }}"
@@ -63,7 +63,7 @@ jobs:
           "SHA-256: ``$hash``" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
       - uses: actions/upload-artifact@v7
         with:
-          name: EarbudsPC-${{ steps.version.outputs.version }}-win-x64
+          name: AudioShortcutSwitch-${{ steps.version.outputs.version }}-win-x64
           path: dist/${{ steps.version.outputs.asset_name }}
           if-no-files-found: error
       - name: Publish release
@@ -74,5 +74,5 @@ jobs:
         run: |
           gh release create "$env:GITHUB_REF_NAME" "dist/${{ steps.version.outputs.asset_name }}" `
             --verify-tag `
-            --title "Earbuds PC Switch ${{ steps.version.outputs.version }}" `
+            --title "Audio Shortcut Switch ${{ steps.version.outputs.version }}" `
             --notes-file README-release.txt

@@ -1,4 +1,4 @@
-Audio Shortcut Switch 0.3.0 (Windows 10/11 x64)
+Audio Shortcut Switch 0.3.1 (Windows 10/11 x64)
 
 使い方
 1. この ZIP を展開し、AudioShortcutSwitch フォルダーを %LOCALAPPDATA% など
@@ -15,8 +15,6 @@ Bluetooth 機器の Stereo 出力 ID を Windows がまだ保持していない�
 確認ボタンは既定出力を変更しません。
 同じ名前のショートカットが既にある場合は、別の名前を入力してください。
 アプリのフォルダーを移動した場合は、ショートカットを作り直してください。
-旧版 Earbuds PC Switch の設定は読み込みません。旧版のショートカットを残す場合は、
-旧版の EarbudsPC フォルダーも残してください。
 
 成功時は画面を出しません。失敗時はエラーを表示し、
 logs\switch.log に結果を残します。configs\*.json には機器固有の ID を保存します。

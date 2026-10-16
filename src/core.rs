@@ -46,18 +46,7 @@ impl Config {
     pub fn read(path: &Path) -> Result<Self, String> {
         let bytes = fs::read(path).map_err(|e| format!("設定ファイルを読めません: {e}"))?;
         let bytes = bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(&bytes);
-        let value: serde_json::Value = serde_json::from_slice(bytes)
-            .map_err(|e| format!("設定ファイルの形式が正しくありません: {e}"))?;
-        if value
-            .get("schemaVersion")
-            .and_then(serde_json::Value::as_u64)
-            == Some(1)
-        {
-            return Err(
-                "旧版の設定ファイルです。新しいアプリでショートカットを作り直してください。".into(),
-            );
-        }
-        let config: Self = serde_json::from_value(value)
+        let config: Self = serde_json::from_slice(bytes)
             .map_err(|e| format!("設定ファイルの形式が正しくありません: {e}"))?;
         config.validate()?;
         Ok(config)

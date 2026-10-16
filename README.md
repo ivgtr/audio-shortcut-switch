@@ -24,5 +24,3 @@ mise exec -- cargo zigbuild --target x86_64-pc-windows-gnu --release
 ```
 
 配布 ZIP には [ToothTrayCLI 0.2-cli-20260701](https://github.com/shunf4/ToothTrayCli/releases/tag/0.2-cli-20260701) と [SoundVolumeView 2.53](https://www.nirsoft.net/utils/sound_volume_view.html) を同梱します。`scripts/package_release.py` は指定した公式 ZIP の SHA-256 を検証し、SoundVolumeView の配布 ZIP の全ファイルと ToothTrayCLI のライセンスを含めてまとめます。補助ツールと実機の設定・ログはソース管理に含めません。
-
-`Switch-Earbuds.ps1`、`Register-Earbuds.ps1`、`New-Shortcut.ps1`、`Launch-Earbuds.vbs` は初期の PowerShell 実装です。配布 ZIP と Rust アプリはこれらを使用しません。

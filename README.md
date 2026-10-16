@@ -6,6 +6,8 @@
 
 [Windows 10/11 x64 用 ZIP をダウンロード](https://github.com/ivgtr/audio-shortcut-switch/releases/latest)
 
+[図で見る使い方](https://ivgtr.github.io/audio-shortcut-switch/)
+
 ## 使い方
 
 1. ZIP を書き込み可能な場所に展開し、`AudioShortcutSwitch.exe` を起動します。Bluetooth 機器は先に Windows でペアリングします。

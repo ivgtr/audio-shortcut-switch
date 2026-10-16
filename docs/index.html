@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#c9f4e7">
+    <meta name="description" content="Audio Shortcut Switchの使い方。デスクトップのショートカットから、Windowsの再生出力を切り替えます。Bluetoothイヤホンは接続も行います。">
+    <title>使い方 | Audio Shortcut Switch</title>
+    <link rel="icon" type="image/svg+xml" href="assets/app.svg">
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="brand" href="#top" aria-label="Audio Shortcut Switch ページの先頭へ">
+          <img src="assets/app.svg" alt="" width="40" height="40">
+          <span>Audio Shortcut Switch</span>
+        </a>
+        <nav aria-label="ページ内メニュー">
+          <a href="#steps">使い方</a>
+          <a class="header-download" href="https://github.com/ivgtr/audio-shortcut-switch/releases/latest">ダウンロード<span aria-hidden="true"> ↗</span></a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="eyebrow-dot"></span> Windows 10 / 11 · x64</p>
+          <h1 id="hero-title">いつもの音へ、<br><span>ダブルクリック。</span></h1>
+          <p class="lead">デスクトップのショートカットから、再生出力を切り替える小さなアプリです。Bluetoothイヤホンなら、接続も自動で行います。</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="https://github.com/ivgtr/audio-shortcut-switch/releases/latest">Windows用ZIPをダウンロード <span aria-hidden="true">↗</span></a>
+            <a class="button button-text" href="#steps">使い方を見る <span aria-hidden="true">↓</span></a>
+          </div>
+        </div>
+        <div class="hero-visual" aria-label="PONアイコンのショートカットから出力先を切り替える操作イメージ">
+          <div class="visual-label">操作イメージ</div>
+          <div class="desktop-card">
+            <div class="desktop-shortcut">
+              <img src="assets/app.svg" alt="PONアイコン" width="88" height="88">
+              <span>イヤホンを使う</span>
+            </div>
+            <div class="visual-arrow" aria-hidden="true">→</div>
+            <div class="output-card">
+              <p>再生出力</p>
+              <span class="output-before">スピーカー</span>
+              <span class="output-arrow" aria-hidden="true">↓</span>
+              <strong><span class="audio-glyph" aria-hidden="true">♪</span> Bluetoothイヤホン</strong>
+              <small>接続してから切り替え</small>
+            </div>
+          </div>
+          <p class="visual-footnote">ショートカットを開くと、接続と切り替えを実行します。</p>
+        </div>
+      </section>
+
+      <section class="steps-section" id="steps" aria-labelledby="steps-title">
+        <div class="wrap">
+          <div class="section-heading">
+            <p class="eyebrow">HOW TO USE</p>
+            <h2 id="steps-title">使い方は、3ステップ。</h2>
+          </div>
+          <ol class="steps">
+            <li class="step">
+              <span class="step-number">01</span>
+              <h3>ZIPを展開して起動</h3>
+              <p>ダウンロードしたZIPを、書き込み可能な場所に展開します。<code>AudioShortcutSwitch.exe</code> を起動してください。</p>
+              <p class="step-note">Bluetooth機器は先にWindowsでペアリングします。</p>
+            </li>
+            <li class="step">
+              <span class="step-number">02</span>
+              <h3>出力先を選んで「作成」</h3>
+              <p>切り替えたい再生出力とショートカット名を選び、「作成」を押します。PONアイコンのショートカットがデスクトップにできます。</p>
+              <p class="step-note">作成した時点では、音は切り替わりません。</p>
+            </li>
+            <li class="step">
+              <span class="step-number">03</span>
+              <h3>ショートカットをダブルクリック</h3>
+              <p>使いたい出力先のショートカットを開くだけ。Bluetoothイヤホンは接続とStereo出力の確認後、再生出力を切り替えます。</p>
+              <p class="step-note">スピーカーやUSB DACなどにも作れます。</p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="help-section wrap" aria-labelledby="help-title">
+        <div class="help-icon" aria-hidden="true">?</div>
+        <div>
+          <h2 id="help-title">Stereo出力が見つからないとき</h2>
+          <p>イヤホンの電源を入れ、設定画面の「接続確認」を一度押してからショートカットを作成してください。確認だけでは既定の出力は変わりません。</p>
+        </div>
+      </section>
+
+      <section class="closing wrap" aria-label="ダウンロード">
+        <img src="assets/app.svg" alt="" width="56" height="56">
+        <div><h2>使う音を、手元のショートカットに。</h2><p>Windows 10 / 11 x64 対応</p></div>
+        <a class="button button-primary" href="https://github.com/ivgtr/audio-shortcut-switch/releases/latest">最新版をダウンロード <span aria-hidden="true">↗</span></a>
+      </section>
+    </main>
+
+    <footer class="site-footer"><div class="wrap"><span>Audio Shortcut Switch</span><a href="https://github.com/ivgtr/audio-shortcut-switch">GitHubで見る ↗</a></div></footer>
+  </body>
+</html>
